@@ -933,6 +933,15 @@ async function loadAdminUsers(){
 async function changeRole(uid,role){await db.collection('shop_users').doc(uid).update({role});loadAdminUsers();}
 async function toggleStatus(uid,s){await db.collection('shop_users').doc(uid).update({status:s==='blocked'?'active':'blocked'});loadAdminUsers();}
 async function deleteUser(uid,name){if(!confirm('Delete "'+name+'"?'))return;if(!confirm('CONFIRM permanently?'))return;
+    // If agent, deactivate their assigned shop
+    const agentShops=await db.collection('shops').where('agentId','==',uid).get();
+    if(!agentShops.empty){
+        const deactivate=confirm('This agent has a shop assigned. Deactivate their shop too?');
+        for(const shopDoc of agentShops.docs){
+            if(deactivate) await shopDoc.ref.update({active:false,agentId:'',agentName:'Unassigned (agent deleted)'});
+            else await shopDoc.ref.update({agentId:'',agentName:'Unassigned (agent deleted)'});
+        }
+    }
     const batch=db.batch();const oSnap=await db.collection('shop_orders').where('uid','==',uid).get();oSnap.forEach(doc=>batch.delete(doc.ref));batch.delete(db.collection('shop_users').doc(uid));await batch.commit();alert(name+' deleted.');loadAdminUsers();}
 
 // ═══════════════════════════════════════════════════════════════════════════════
