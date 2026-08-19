@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1B5E20">
+<title>ShopManager — Smart Shop & Accounts</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--primary:#1B5E20;--primary-dark:#0D3B13;--accent:#FF6F00;--accent-light:#FFA000;--bg:#F1F8E9;--card:#fff;--text:#333;--muted:#777;--border:#e0e0e0;--success:#2E7D32;--danger:#D32F2F;--warning:#E65100;--info:#1565C0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+
+.header{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.header h1{font-size:18px;font-weight:700}
+.header-right{display:flex;align-items:center;gap:8px}
+.role-badge{background:rgba(255,215,0,0.25);color:#FFD700;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.hdr-btn{background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-weight:600}
+.hdr-btn:hover{background:rgba(255,255,255,0.25)}
+.cart-badge{background:var(--accent);color:#fff;border-radius:50%;padding:1px 5px;font-size:9px;font-weight:700;margin-left:2px}
+
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto}
+.modal h2{color:var(--primary);margin-bottom:16px;font-size:20px}
+.modal input,.modal select{width:100%;padding:11px 14px;border:2px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:10px}
+.modal input:focus,.modal select:focus{outline:none;border-color:var(--primary)}
+
+.container{max-width:900px;margin:0 auto;padding:14px}
+.card{background:var(--card);border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.card h2{font-size:12px;color:var(--primary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #E8F5E9}
+
+.tabs{display:flex;gap:3px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.tab{padding:8px 14px;border:2px solid var(--border);border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;background:#fff;color:#555;white-space:nowrap;transition:all .2s}
+.tab.active{border-color:var(--primary);background:var(--primary);color:#fff}
+.tc{display:none}.tc.active{display:block}
+
+.btn{padding:9px 14px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:opacity .2s}
+.btn:active{opacity:.7}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-accent{background:linear-gradient(135deg,var(--accent),var(--accent-light));color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-outline{background:none;border:2px solid var(--primary);color:var(--primary)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn-full{width:100%;padding:12px;font-size:14px}
+
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.row label{font-size:12px;color:#555;font-weight:600;min-width:100px}
+input[type="number"],input[type="text"],input[type="email"],input[type="date"],input[type="password"],input[type="url"],select,textarea{padding:9px 11px;border:2px solid var(--border);border-radius:8px;font-size:13px;max-width:250px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary)}
+textarea{max-width:100%;min-height:60px;resize:vertical}
+
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin:12px 0}
+.product-card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);transition:transform .2s}
+.product-card:hover{transform:translateY(-2px)}
+.product-img{width:100%;height:120px;object-fit:cover;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:40px;color:#ccc}
+.product-info{padding:10px}
+.product-info h3{font-size:13px;margin-bottom:4px;color:var(--text)}
+.product-info .price{font-size:15px;font-weight:700;color:var(--primary)}
+.product-info .category{font-size:10px;color:var(--muted);margin-bottom:4px}
+.product-info .stock{font-size:10px;color:var(--success)}
+.product-info .out{font-size:10px;color:var(--danger)}
+.product-actions{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0}
+.like-btn{background:none;border:none;font-size:18px;cursor:pointer;padding:2px 6px;border-radius:6px;transition:transform .2s;display:flex;align-items:center;gap:3px}
+.like-btn:active{transform:scale(1.3)}
+.like-btn .like-count{font-size:10px;color:var(--muted)}
+.star-rating{display:inline-flex;gap:1px}
+.star-rating .star{font-size:14px;cursor:pointer;color:#ddd;transition:color .15s}
+.star-rating .star.filled{color:#FFC107}
+.star-rating .star:hover~.star{color:#ddd}
+.rating-info{font-size:9px;color:var(--muted);text-align:right}
+
+.shop-list-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:12px 0}
+.shop-list-card{background:#fff;border:2px solid var(--border);border-radius:12px;padding:16px;position:relative;transition:all .2s;cursor:pointer}
+.shop-list-card:hover{border-color:var(--primary);transform:translateY(-2px)}
+.shop-list-card .shop-icon{font-size:36px;margin-bottom:8px}
+.shop-list-card .shop-name{font-size:14px;font-weight:700;color:var(--text)}
+.shop-list-card .shop-meta{font-size:11px;color:var(--muted);margin-top:4px}
+.fav-btn{position:absolute;top:10px;right:10px;background:none;border:none;font-size:22px;cursor:pointer;color:#ddd;transition:color .2s,transform .2s}
+.fav-btn.faved{color:#E91E63}
+.fav-btn:active{transform:scale(1.3)}
+.fav-section{margin-bottom:16px}
+.fav-section h3{font-size:13px;color:#E91E63;margin-bottom:8px;font-weight:700}
+
+.shop-type-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin:12px 0}
+.shop-type-card{background:#fff;border:2px solid var(--border);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:all .2s}
+.shop-type-card:hover{border-color:var(--primary);transform:translateY(-2px)}
+.shop-type-card.selected{border-color:var(--primary);background:#E8F5E9}
+.shop-type-card .icon{font-size:32px;margin-bottom:6px}
+.shop-type-card .name{font-size:12px;font-weight:600;color:var(--text)}
+
+.cart-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #f0f0f0;font-size:12px}
+.cart-item:last-child{border-bottom:none}
+.qty-ctrl{display:flex;align-items:center;gap:6px}
+.qty-ctrl button{width:24px;height:24px;border:1px solid var(--border);border-radius:4px;background:#fff;cursor:pointer;font-weight:700}
+.qty-ctrl span{font-weight:600;min-width:20px;text-align:center}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:10px 0}
+.stat-card{background:#f5f5f5;border-radius:10px;padding:12px;text-align:center}
+.stat-card .val{font-size:20px;font-weight:700;color:var(--primary)}
+.stat-card .lbl{font-size:10px;color:var(--muted);margin-top:2px}
+
+.tbl{width:100%;font-size:11px;border-collapse:collapse}
+.tbl th{background:var(--primary);color:#fff;padding:7px;font-size:10px;text-align:left}
+.tbl td{padding:6px;border:1px solid #eee}
+.tbl tr:nth-child(even){background:#f9f9f9}
+
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:600}
+.b-active{background:#E8F5E9;color:#2E7D32}
+.b-pending{background:#FFF3E0;color:#E65100}
+.b-blocked{background:#FFEBEE;color:#D32F2F}
+.b-agent{background:#EDE7F6;color:#6A1B9A}
+.b-admin{background:#E3F2FD;color:#1565C0}
+
+.msg{padding:8px;border-radius:6px;margin:6px 0;font-size:11px}
+.msg-ok{background:#E8F5E9;color:#2E7D32}
+.msg-err{background:#FFEBEE;color:#D32F2F}
+.note{font-size:10px;color:#999;margin-top:4px;font-style:italic}
+
+.order-card{background:#f9f9f9;border-radius:10px;padding:12px;margin-bottom:10px;border-left:4px solid var(--primary)}
+.order-card.pending{border-left-color:var(--accent)}
+.order-card.completed{border-left-color:var(--success)}
+.order-card.cancelled{border-left-color:var(--danger)}
+
+.search-bar{width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:10px;font-size:13px;margin-bottom:12px;max-width:100%}
+.search-bar:focus{outline:none;border-color:var(--primary)}
+
+@media(max-width:480px){
+    .product-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+    .shop-type-grid{grid-template-columns:repeat(2,1fr)}
+    .shop-list-grid{grid-template-columns:1fr}
+    .stats-grid{grid-template-columns:1fr 1fr}
+    .container{padding:10px}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1 id="shopTitle">🛒 ShopManager</h1>
+    <div class="header-right">
+        <span id="userInfo" style="font-size:10px;opacity:.7"></span>
+        <span class="role-badge" id="roleBadge" style="display:none"></span>
+        <button class="hdr-btn" id="cartBtn" onclick="showCart()" style="display:none">🛒 Cart <span class="cart-badge" id="cartCount">0</span></button>
+        <button class="hdr-btn" id="loginBtn" onclick="showLoginModal()">Login</button>
+        <button class="hdr-btn" id="logoutBtn" onclick="doLogout()" style="display:none">Logout</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="authModal">
+    <div class="modal">
+        <h2 id="authTitle">Login</h2>
+        <div id="authLoginFields">
+            <input type="email" id="loginEmail" placeholder="Email">
+            <input type="password" id="loginPass" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+            <button class="btn btn-primary btn-full" onclick="doLogin()">LOGIN</button>
+            <p style="text-align:center;margin-top:10px;font-size:12px;color:var(--muted)">New here? <a href="#" onclick="toggleAuthMode()" style="color:var(--primary);font-weight:600">Register</a></p>
+        </div>
+        <div id="authRegFields" style="display:none">
+            <input type="text" id="regName" placeholder="Full Name">
+            <input type="email" id="regEmail" placeholder="Email">
+            <input type="text" id="regPhone" placeholder="Phone Number">
+            <input type="password" id="regPass" placeholder="Password (min 6 chars)">
+            <button class="btn btn-success btn-full" onclick="doRegister()">REGISTER</button>
+            <p style="text-align:center;margin-top:10px;font-size:12px;color:var(--muted)">Already have an account? <a href="#" onclick="toggleAuthMode()" style="color:var(--primary);font-weight:600">Login</a></p>
+        </div>
+        <p id="authError" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></p>
+        <button class="btn btn-outline btn-sm" onclick="hideAuthModal()" style="margin-top:12px">Cancel</button>
+    </div>
+</div>
+
+<div class="container" id="mainContainer">
+    <div style="text-align:center;padding:40px;color:#999">Loading...</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// FIREBASE CONFIG
+// ═══════════════════════════════════════════════════════════════════════════════
+firebase.initializeApp({
+    apiKey:"AIzaSyC4zfR7_BnJb2QFCI74ld1gWtol7QPAqnQ",
+    authDomain:"shop-manager-ad7d3.firebaseapp.com",
+    projectId:"shop-manager-ad7d3",
+    storageBucket:"shop-manager-ad7d3.firebasestorage.app",
+    messagingSenderId:"3645684873",
+    appId:"1:3645684873:web:5b7e7c1b168892cef49a58",
+    measurementId:"G-FFZ10VF22M"
+});
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHOP TYPE TEMPLATES
+// ═══════════════════════════════════════════════════════════════════════════════
+const SHOP_TEMPLATES = {
+    grocery:{name:'Grocery Store',icon:'🛒',items:[{name:'Rice (1kg)',price:55,category:'Grains'},{name:'Wheat Flour (1kg)',price:40,category:'Grains'},{name:'Sugar (1kg)',price:45,category:'Essentials'},{name:'Salt (1kg)',price:20,category:'Essentials'},{name:'Cooking Oil (1L)',price:150,category:'Oils'},{name:'Toor Dal (1kg)',price:130,category:'Pulses'},{name:'Moong Dal (1kg)',price:120,category:'Pulses'},{name:'Tea Powder (250g)',price:80,category:'Beverages'},{name:'Coffee Powder (200g)',price:120,category:'Beverages'},{name:'Milk Packet (500ml)',price:27,category:'Dairy'},{name:'Curd (500ml)',price:30,category:'Dairy'},{name:'Bread',price:35,category:'Bakery'},{name:'Eggs (12 pcs)',price:80,category:'Poultry'},{name:'Onion (1kg)',price:35,category:'Vegetables'},{name:'Potato (1kg)',price:30,category:'Vegetables'},{name:'Tomato (1kg)',price:40,category:'Vegetables'},{name:'Soap Bar',price:35,category:'Personal Care'},{name:'Shampoo Sachet (Pack of 10)',price:30,category:'Personal Care'},{name:'Detergent (1kg)',price:85,category:'Cleaning'},{name:'Biscuits (Pack)',price:20,category:'Snacks'}]},
+    barber:{name:'Barber Shop',icon:'💈',items:[{name:'Haircut (Men)',price:100,category:'Haircut'},{name:'Haircut (Boys)',price:70,category:'Haircut'},{name:'Beard Trim',price:50,category:'Grooming'},{name:'Clean Shave',price:60,category:'Grooming'},{name:'Hair Wash',price:50,category:'Hair Care'},{name:'Head Massage',price:80,category:'Massage'},{name:'Oil Massage (Full Head)',price:150,category:'Massage'},{name:'Hair Color',price:200,category:'Hair Care'},{name:'Hair Straightening',price:500,category:'Hair Care'},{name:'Facial (Men)',price:250,category:'Skin Care'},{name:'Threading (Eyebrow)',price:30,category:'Grooming'},{name:'Detan Pack',price:150,category:'Skin Care'},{name:'Hair Spa',price:400,category:'Hair Care'},{name:'Shave + Haircut Combo',price:140,category:'Combo'}]},
+    beauty:{name:'Beauty Parlour',icon:'💅',items:[{name:'Haircut (Ladies)',price:200,category:'Haircut'},{name:'Hair Wash & Blow Dry',price:150,category:'Hair Care'},{name:'Hair Coloring',price:800,category:'Hair Care'},{name:'Facial (Basic)',price:300,category:'Skin Care'},{name:'Facial (Gold)',price:600,category:'Skin Care'},{name:'Threading (Full Face)',price:80,category:'Grooming'},{name:'Waxing (Full Arms)',price:200,category:'Waxing'},{name:'Waxing (Full Legs)',price:300,category:'Waxing'},{name:'Manicure',price:250,category:'Nails'},{name:'Pedicure',price:300,category:'Nails'},{name:'Bridal Makeup',price:5000,category:'Makeup'},{name:'Party Makeup',price:2000,category:'Makeup'},{name:'Mehndi (Hands)',price:500,category:'Mehndi'},{name:'Hair Spa',price:500,category:'Hair Care'}]},
+    hotel:{name:'Hotel / Restaurant',icon:'🍽️',items:[{name:'Idli (2 pcs)',price:30,category:'Breakfast'},{name:'Dosa (Plain)',price:40,category:'Breakfast'},{name:'Masala Dosa',price:60,category:'Breakfast'},{name:'Meals (Veg)',price:80,category:'Lunch/Dinner'},{name:'Meals (Non-Veg)',price:120,category:'Lunch/Dinner'},{name:'Biryani (Chicken)',price:150,category:'Lunch/Dinner'},{name:'Biryani (Mutton)',price:200,category:'Lunch/Dinner'},{name:'Fried Rice',price:80,category:'Chinese'},{name:'Noodles',price:70,category:'Chinese'},{name:'Chapati (1 pc)',price:15,category:'Lunch/Dinner'},{name:'Butter Naan',price:30,category:'Lunch/Dinner'},{name:'Paneer Butter Masala',price:120,category:'Curries'},{name:'Chicken Curry',price:150,category:'Curries'},{name:'Tea',price:15,category:'Beverages'},{name:'Coffee',price:20,category:'Beverages'},{name:'Fresh Juice',price:40,category:'Beverages'}]},
+    hardware:{name:'Hardware Store',icon:'🔧',items:[{name:'Cement (50kg bag)',price:400,category:'Building'},{name:'Sand (per CFT)',price:50,category:'Building'},{name:'Paint (1L)',price:250,category:'Paints'},{name:'Hammer',price:150,category:'Tools'},{name:'Screwdriver Set',price:200,category:'Tools'},{name:'Nails (100g)',price:25,category:'Fasteners'},{name:'PVC Pipe (10ft)',price:120,category:'Plumbing'},{name:'Tap / Faucet',price:300,category:'Plumbing'},{name:'Electric Wire (1m)',price:15,category:'Electrical'},{name:'Switch Board',price:80,category:'Electrical'},{name:'LED Bulb',price:100,category:'Electrical'},{name:'Door Lock',price:350,category:'Security'},{name:'Measuring Tape',price:80,category:'Tools'}]},
+    medical:{name:'Medical / Pharmacy',icon:'💊',items:[{name:'Paracetamol (Strip)',price:15,category:'Pain Relief'},{name:'Ibuprofen (Strip)',price:25,category:'Pain Relief'},{name:'Cough Syrup (100ml)',price:60,category:'Cold & Cough'},{name:'Vitamin C Tablets',price:50,category:'Vitamins'},{name:'Multivitamin (30 tabs)',price:120,category:'Vitamins'},{name:'Band-Aid (Pack)',price:30,category:'First Aid'},{name:'Cotton Roll',price:25,category:'First Aid'},{name:'Dettol (100ml)',price:45,category:'Antiseptic'},{name:'ORS Packet',price:10,category:'Hydration'},{name:'Face Mask (Pack of 10)',price:50,category:'Protection'},{name:'Hand Sanitizer (100ml)',price:40,category:'Hygiene'},{name:'BP Monitor',price:1200,category:'Devices'},{name:'Thermometer (Digital)',price:150,category:'Devices'}]},
+    milk:{name:'Milk & Dairy Shop',icon:'🥛',items:[{name:'Full Cream Milk (1L)',price:60,category:'Milk'},{name:'Toned Milk (1L)',price:50,category:'Milk'},{name:'Buffalo Milk (1L)',price:70,category:'Milk'},{name:'Curd (500ml)',price:30,category:'Curd'},{name:'Curd (1L)',price:55,category:'Curd'},{name:'Paneer (200g)',price:80,category:'Cheese'},{name:'Paneer (500g)',price:180,category:'Cheese'},{name:'Butter (100g)',price:50,category:'Butter & Ghee'},{name:'Ghee (500ml)',price:350,category:'Butter & Ghee'},{name:'Ghee (1L)',price:650,category:'Butter & Ghee'},{name:'Buttermilk (500ml)',price:20,category:'Drinks'},{name:'Lassi (Glass)',price:30,category:'Drinks'},{name:'Ice Cream (Cup)',price:30,category:'Frozen'}]},
+    supermarket:{name:'Super Market',icon:'🏪',items:[{name:'Rice (5kg)',price:275,category:'Grains'},{name:'Wheat Flour (5kg)',price:200,category:'Grains'},{name:'Cooking Oil (5L)',price:700,category:'Oils'},{name:'Sugar (5kg)',price:220,category:'Essentials'},{name:'Tea (500g)',price:160,category:'Beverages'},{name:'Instant Noodles (Pack of 4)',price:80,category:'Ready to Eat'},{name:'Chips (Large)',price:40,category:'Snacks'},{name:'Chocolate Bar',price:50,category:'Snacks'},{name:'Soft Drink (1L)',price:40,category:'Beverages'},{name:'Shampoo (200ml)',price:120,category:'Personal Care'},{name:'Toothpaste',price:60,category:'Personal Care'},{name:'Detergent (2kg)',price:160,category:'Cleaning'},{name:'Floor Cleaner (1L)',price:80,category:'Cleaning'},{name:'Tissue Paper (Pack)',price:40,category:'Household'},{name:'Fresh Vegetables (Bundle)',price:50,category:'Fresh'},{name:'Fresh Fruits (1kg)',price:80,category:'Fresh'}]}
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+let CU = null, UR = 'guest', UD = {}, CART = [], ALL_SHOPS = [];
+try { CART = JSON.parse(localStorage.getItem('shop_cart') || '[]'); } catch(e) { CART = []; }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════════════════════════
+function showLoginModal(){document.getElementById('authModal').classList.add('show');document.getElementById('authError').style.display='none';}
+function hideAuthModal(){document.getElementById('authModal').classList.remove('show');}
+function toggleAuthMode(){
+    const l=document.getElementById('authLoginFields'),r=document.getElementById('authRegFields'),t=document.getElementById('authTitle');
+    if(l.style.display==='none'){l.style.display='block';r.style.display='none';t.textContent='Login';}
+    else{l.style.display='none';r.style.display='block';t.textContent='Register';}
+    document.getElementById('authError').style.display='none';
+}
+function doLogin(){
+    const email=document.getElementById('loginEmail').value.trim(),pass=document.getElementById('loginPass').value,err=document.getElementById('authError');
+    err.style.display='none';
+    if(!email||!pass){err.textContent='Enter email and password.';err.style.display='block';return;}
+    auth.signInWithEmailAndPassword(email,pass).then(()=>hideAuthModal()).catch(x=>{err.textContent=x.message;err.style.display='block';});
+}
+function doRegister(){
+    const name=document.getElementById('regName').value.trim(),email=document.getElementById('regEmail').value.trim(),phone=document.getElementById('regPhone').value.trim(),pass=document.getElementById('regPass').value,err=document.getElementById('authError');
+    err.style.display='none';
+    if(!name||!email){err.textContent='Name and email required.';err.style.display='block';return;}
+    if(pass.length<6){err.textContent='Password must be at least 6 characters.';err.style.display='block';return;}
+    auth.createUserWithEmailAndPassword(email,pass).then(cred=>{
+        return db.collection('shop_users').doc(cred.user.uid).set({name,email,phone,role:'member',status:'active',createdAt:new Date().toISOString()});
+    }).then(()=>hideAuthModal()).catch(x=>{err.textContent=x.message;err.style.display='block';});
+}
+function doLogout(){auth.signOut();}
+
+auth.onAuthStateChanged(async u=>{
+    if(u){
+        CU=u;
+        const doc=await db.collection('shop_users').doc(u.uid).get();
+        if(doc.exists){UD=doc.data();UR=UD.role||'member';}
+        else{UD={name:u.email,role:'member'};UR='member';await db.collection('shop_users').doc(u.uid).set({name:u.email,email:u.email,phone:'',role:'member',status:'active',createdAt:new Date().toISOString()});}
+        if(UD.status==='blocked'){alert('Your account has been blocked.');auth.signOut();return;}
+    }else{CU=null;UR='guest';UD={};}
+    updateHeader();
+    renderApp();
+});
+
+function updateHeader(){
+    const badge=document.getElementById('roleBadge'),info=document.getElementById('userInfo');
+    const loginBtn=document.getElementById('loginBtn'),logoutBtn=document.getElementById('logoutBtn'),cartBtn=document.getElementById('cartBtn');
+    if(CU){
+        info.textContent=UD.name||CU.email;badge.textContent=UR.toUpperCase();badge.style.display='inline-block';
+        loginBtn.style.display='none';logoutBtn.style.display='inline-block';
+        cartBtn.style.display=(UR==='member')?'inline-block':'none';
+    }else{
+        info.textContent='Guest';badge.style.display='none';
+        loginBtn.style.display='inline-block';logoutBtn.style.display='none';cartBtn.style.display='inline-block';
+    }
+    updateCartCount();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CART
+// ═══════════════════════════════════════════════════════════════════════════════
+function saveCart(){localStorage.setItem('shop_cart',JSON.stringify(CART));updateCartCount();}
+function updateCartCount(){document.getElementById('cartCount').textContent=CART.reduce((s,i)=>s+i.qty,0);}
+function addToCart(prodId,name,price,stock,shopId){
+    const e=CART.find(c=>c.id===prodId);
+    if(e){if(e.qty>=stock){alert('Max stock reached.');return;}e.qty++;}
+    else CART.push({id:prodId,name,price,qty:1,stock,shopId});
+    saveCart();alert(name+' added to cart!');
+}
+function removeFromCart(i){CART.splice(i,1);saveCart();showCart();}
+function changeQty(i,d){CART[i].qty+=d;if(CART[i].qty<=0)CART.splice(i,1);else if(CART[i].qty>CART[i].stock)CART[i].qty=CART[i].stock;saveCart();showCart();}
+
+function showCart(){
+    const mc=document.getElementById('mainContainer');
+    let total=CART.reduce((s,i)=>s+(i.price*i.qty),0);
+    let html=`<button class="btn btn-outline btn-sm" onclick="renderApp()" style="margin-bottom:10px">← Back</button>`;
+    html+=`<div class="card"><h2>Shopping Cart</h2>`;
+    if(!CART.length){html+='<p class="note">Your cart is empty.</p>';}
+    else{
+        CART.forEach((item,i)=>{
+            html+=`<div class="cart-item"><div><b>${item.name}</b><br><span style="font-size:11px;color:var(--muted)">₹${item.price.toLocaleString('en-IN')} each</span></div>
+            <div class="qty-ctrl"><button onclick="changeQty(${i},-1)">−</button><span>${item.qty}</span><button onclick="changeQty(${i},1)">+</button>
+            <button class="btn btn-danger btn-sm" onclick="removeFromCart(${i})" style="margin-left:6px">✕</button></div>
+            <div style="font-weight:700;color:var(--primary)">₹${(item.price*item.qty).toLocaleString('en-IN')}</div></div>`;
+        });
+        html+=`<div style="text-align:right;padding:12px;font-size:16px;font-weight:700;color:var(--primary)">Total: ₹${total.toLocaleString('en-IN')}</div>`;
+        html+=`<button class="btn btn-accent btn-full" onclick="placeOrder()">Place Order</button>`;
+    }
+    html+='</div>';mc.innerHTML=html;
+}
+
+async function placeOrder(){
+    if(!CU){showLoginModal();alert('Please login to place an order.');return;}
+    if(!CART.length){alert('Cart is empty.');return;}
+    const total=CART.reduce((s,i)=>s+(i.price*i.qty),0);
+    // Group by shop
+    const byShop={};
+    CART.forEach(c=>{const sid=c.shopId||'unknown';if(!byShop[sid])byShop[sid]=[];byShop[sid].push(c);});
+    for(const [shopId,items] of Object.entries(byShop)){
+        const shopTotal=items.reduce((s,i)=>s+(i.price*i.qty),0);
+        await db.collection('shop_orders').add({uid:CU.uid,memberName:UD.name||CU.email,memberEmail:CU.email,shopId,items:items.map(c=>({id:c.id,name:c.name,price:c.price,qty:c.qty})),total:shopTotal,status:'pending',createdAt:new Date().toISOString()});
+        for(const item of items){const pDoc=await db.collection('shop_products').doc(item.id).get();if(pDoc.exists){await db.collection('shop_products').doc(item.id).update({stock:Math.max(0,(pDoc.data().stock||0)-item.qty)});}}
+        await db.collection('shop_accounts').add({type:'sale',amount:shopTotal,shopId,description:'Order by '+(UD.name||CU.email),date:new Date().toISOString(),createdBy:CU.uid,createdAt:new Date().toISOString()});
+    }
+    CART=[];saveCart();alert('Order placed! Total: ₹'+total.toLocaleString('en-IN'));renderApp();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN RENDER
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderApp(){
+    if(UR==='admin') renderAdmin();
+    else if(UR==='agent') renderAgent();
+    else renderMember();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MEMBER VIEW — Browse Shops, Favourite, Like, Rate
+// ═══════════════════════════════════════════════════════════════════════════════
+async function renderMember(){
+    const mc=document.getElementById('mainContainer');
+    let tabs=`<div class="tabs">
+        <div class="tab active" onclick="memberTab(this,'mem-shops')">🏪 All Shops</div>
+        <div class="tab" onclick="memberTab(this,'mem-favs')">❤️ Favourites</div>`;
+    if(CU) tabs+=`<div class="tab" onclick="memberTab(this,'mem-orders')">📦 My Orders</div>`;
+    tabs+=`</div>`;
+    mc.innerHTML=tabs+`<div id="mem-shops" class="tc active"></div><div id="mem-favs" class="tc"></div><div id="mem-orders" class="tc"></div>`;
+    loadAllShops();
+}
+function memberTab(el,id){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById(id).classList.add('active');
+    if(id==='mem-shops')loadAllShops();if(id==='mem-favs')loadFavShops();if(id==='mem-orders')loadMyOrders();}
+
+async function loadAllShops(){
+    const c=document.getElementById('mem-shops');
+    c.innerHTML='<p style="text-align:center;color:#999;padding:20px">Loading shops...</p>';
+    const snap=await db.collection('shops').where('active','==',true).get();
+    ALL_SHOPS=[];
+    snap.forEach(doc=>ALL_SHOPS.push({id:doc.id,...doc.data()}));
+    // Get user favourites
+    let favIds=[];
+    if(CU){const favDoc=await db.collection('user_favourites').doc(CU.uid).get();if(favDoc.exists)favIds=favDoc.data().shopIds||[];}
+    let html=`<input class="search-bar" type="text" placeholder="🔍 Search shops..." oninput="filterShopCards(this.value)">`;
+    if(!ALL_SHOPS.length){html+='<div class="card" style="text-align:center;padding:30px"><p style="color:var(--muted)">No shops available yet. Check back soon!</p></div>';c.innerHTML=html;return;}
+    html+='<div class="shop-list-grid" id="shopGrid">';
+    ALL_SHOPS.forEach(shop=>{
+        const isFav=favIds.includes(shop.id);
+        const ownerLabel=shop.agentName&&shop.agentName!=='Unassigned'?shop.agentName:(shop.ownerName||'Admin');
+        html+=`<div class="shop-list-card" data-name="${(shop.shopName||'').toLowerCase()}" data-type="${(shop.shopType||'').toLowerCase()}" onclick="openShopProducts('${shop.id}')">
+            <button class="fav-btn ${isFav?'faved':''}" onclick="event.stopPropagation();toggleFavShop('${shop.id}',this)" title="Favourite">♥</button>
+            <div class="shop-icon">${shop.shopIcon||'🏪'}</div>
+            <div class="shop-name">${shop.shopName||'Unnamed Shop'}</div>
+            <div class="shop-meta">${shop.shopType?SHOP_TEMPLATES[shop.shopType]?.name||shop.shopType:''}</div>
+            <div class="shop-meta">👤 ${ownerLabel}</div>
+            <div class="shop-meta">${shop.address||''}</div>
+            <div class="shop-meta">${shop.phone||''}</div>
+        </div>`;
+    });
+    html+='</div>';c.innerHTML=html;
+}
+
+function filterShopCards(q){q=q.toLowerCase();document.querySelectorAll('.shop-list-card').forEach(c=>{c.style.display=(c.dataset.name.includes(q)||c.dataset.type.includes(q))?'':'none';});}
+
+async function toggleFavShop(shopId,btn){
+    if(!CU){showLoginModal();return;}
+    const ref=db.collection('user_favourites').doc(CU.uid);
+    const doc=await ref.get();
+    let favIds=doc.exists?(doc.data().shopIds||[]):[];
+    if(favIds.includes(shopId)){favIds=favIds.filter(id=>id!==shopId);btn.classList.remove('faved');}
+    else{favIds.push(shopId);btn.classList.add('faved');}
+    await ref.set({shopIds:favIds,updatedAt:new Date().toISOString()});
+}
+
+async function loadFavShops(){
+    const c=document.getElementById('mem-favs');
+    if(!CU){c.innerHTML='<div class="card"><p class="note">Login to see your favourite shops.</p></div>';return;}
+    c.innerHTML='<p style="text-align:center;color:#999;padding:20px">Loading favourites...</p>';
+    const favDoc=await db.collection('user_favourites').doc(CU.uid).get();
+    const favIds=favDoc.exists?(favDoc.data().shopIds||[]):[];
+    if(!favIds.length){c.innerHTML='<div class="card" style="text-align:center;padding:30px"><p>❤️ No favourite shops yet.</p><p class="note">Go to All Shops and tap the heart to add favourites!</p></div>';return;}
+    const snap=await db.collection('shops').where('active','==',true).get();
+    const favShops=[];
+    snap.forEach(doc=>{if(favIds.includes(doc.id))favShops.push({id:doc.id,...doc.data()});});
+    let html='<div class="fav-section"><h3>❤️ Your Favourite Shops</h3></div>';
+    html+='<div class="shop-list-grid">';
+    favShops.forEach(shop=>{
+        html+=`<div class="shop-list-card" data-name="${(shop.shopName||'').toLowerCase()}" onclick="openShopProducts('${shop.id}')">
+            <button class="fav-btn faved" onclick="event.stopPropagation();toggleFavShop('${shop.id}',this)" title="Remove Favourite">♥</button>
+            <div class="shop-icon">${shop.shopIcon||'🏪'}</div>
+            <div class="shop-name">${shop.shopName||'Unnamed Shop'}</div>
+            <div class="shop-meta">${shop.address||''}</div>
+        </div>`;
+    });
+    html+='</div>';c.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// OPEN SHOP PRODUCTS — With Like & Rating
+// ═══════════════════════════════════════════════════════════════════════════════
+async function openShopProducts(shopId){
+    const mc=document.getElementById('mainContainer');
+    mc.innerHTML='<p style="text-align:center;color:#999;padding:20px">Loading products...</p>';
+    const shopDoc=await db.collection('shops').doc(shopId).get();
+    const shop=shopDoc.exists?shopDoc.data():{};
+    const snap=await db.collection('shop_products').where('shopId','==',shopId).where('active','==',true).get();
+    // Get likes and ratings for this user
+    let userLikes={},userRatings={};
+    if(CU){
+        const likeSnap=await db.collection('product_likes').where('uid','==',CU.uid).where('shopId','==',shopId).get();
+        likeSnap.forEach(doc=>{userLikes[doc.data().productId]=doc.id;});
+        const rateSnap=await db.collection('product_ratings').where('uid','==',CU.uid).where('shopId','==',shopId).get();
+        rateSnap.forEach(doc=>{userRatings[doc.data().productId]={id:doc.id,rating:doc.data().rating};});
+    }
+    let html=`<button class="btn btn-outline btn-sm" onclick="renderApp()" style="margin-bottom:10px">← Back to Shops</button>`;
+    html+=`<div class="card"><h2>${shop.shopIcon||'🏪'} ${shop.shopName||'Shop'}</h2>`;
+    const shopOwner=shop.agentName&&shop.agentName!=='Unassigned'?shop.agentName:(shop.ownerName||'Admin');
+    if(shop.address) html+=`<p style="font-size:11px;color:var(--muted)">📍 ${shop.address} | 📞 ${shop.phone||'—'} | 👤 ${shopOwner}</p>`;
+    else html+=`<p style="font-size:11px;color:var(--muted)">👤 Managed by: ${shopOwner}</p>`;
+    html+=`</div>`;
+    html+=`<input class="search-bar" type="text" placeholder="🔍 Search products..." oninput="filterProducts(this.value)">`;
+    html+='<div class="product-grid" id="productGrid">';
+    if(snap.empty) html+='<p class="note" style="grid-column:1/-1;text-align:center;padding:20px">No products available yet.</p>';
+    snap.forEach(doc=>{
+        const p=doc.data();
+        const liked=!!userLikes[doc.id];
+        const userRating=userRatings[doc.id]?userRatings[doc.id].rating:0;
+        const stockTxt=p.stock>0?`<span class="stock">In Stock (${p.stock})</span>`:`<span class="out">Out of Stock</span>`;
+        const cartBtn=p.stock>0?`<button class="btn btn-accent btn-sm" style="width:100%;margin-top:6px" onclick="addToCart('${doc.id}','${p.name.replace(/'/g,"\\'")}',${p.price},${p.stock},'${shopId}')">Add to Cart</button>`:`<button class="btn btn-sm" style="width:100%;margin-top:6px;opacity:.5" disabled>Out of Stock</button>`;
+        // Stars
+        let stars='<div class="star-rating">';
+        for(let i=1;i<=5;i++){stars+=`<span class="star ${i<=userRating?'filled':''}" onclick="rateProduct('${doc.id}','${shopId}',${i},this)">★</span>`;}
+        stars+='</div>';
+        const avgRating=p.avgRating?p.avgRating.toFixed(1):'—';
+        const ratingCount=p.ratingCount||0;
+        html+=`<div class="product-card" data-name="${p.name.toLowerCase()}" data-cat="${(p.category||'').toLowerCase()}">
+            <div class="product-img">${p.imageUrl?'<img src="'+p.imageUrl+'" style="width:100%;height:100%;object-fit:cover">':(shop.shopIcon||'📦')}</div>
+            <div class="product-info">
+                <span class="category">${p.category||'General'}</span>
+                <h3>${p.name}</h3>
+                <div class="price">₹${p.price.toLocaleString('en-IN')}</div>
+                ${stockTxt}
+                <div class="product-actions">
+                    <button class="like-btn" onclick="toggleLike('${doc.id}','${shopId}',this)">
+                        <span>${liked?'❤️':'🤍'}</span>
+                        <span class="like-count">${p.likeCount||0}</span>
+                    </button>
+                    <div>
+                        ${stars}
+                        <div class="rating-info">⭐ ${avgRating} (${ratingCount})</div>
+                    </div>
+                </div>
+                ${cartBtn}
+            </div>
+        </div>`;
+    });
+    html+='</div>';mc.innerHTML=html;
+}
+
+function filterProducts(q){q=q.toLowerCase();document.querySelectorAll('.product-card').forEach(c=>{c.style.display=(c.dataset.name.includes(q)||c.dataset.cat.includes(q))?'':'none';});}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LIKE / HEART
+// ═══════════════════════════════════════════════════════════════════════════════
+async function toggleLike(productId,shopId,btn){
+    if(!CU){showLoginModal();return;}
+    const existing=await db.collection('product_likes').where('uid','==',CU.uid).where('productId','==',productId).get();
+    const prodRef=db.collection('shop_products').doc(productId);
+    if(!existing.empty){
+        // Unlike
+        existing.forEach(async doc=>await doc.ref.delete());
+        await prodRef.update({likeCount:firebase.firestore.FieldValue.increment(-1)});
+        btn.querySelector('span').textContent='🤍';
+        const countEl=btn.querySelector('.like-count');
+        countEl.textContent=Math.max(0,parseInt(countEl.textContent)-1);
+    }else{
+        // Like
+        await db.collection('product_likes').add({uid:CU.uid,productId,shopId,createdAt:new Date().toISOString()});
+        await prodRef.update({likeCount:firebase.firestore.FieldValue.increment(1)});
+        btn.querySelector('span').textContent='❤️';
+        const countEl=btn.querySelector('.like-count');
+        countEl.textContent=parseInt(countEl.textContent)+1;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RATING / STARS
+// ═══════════════════════════════════════════════════════════════════════════════
+async function rateProduct(productId,shopId,rating,starEl){
+    if(!CU){showLoginModal();return;}
+    const existing=await db.collection('product_ratings').where('uid','==',CU.uid).where('productId','==',productId).get();
+    if(!existing.empty){
+        // Update existing rating
+        existing.forEach(async doc=>await doc.ref.update({rating,updatedAt:new Date().toISOString()}));
+    }else{
+        // New rating
+        await db.collection('product_ratings').add({uid:CU.uid,productId,shopId,rating,createdAt:new Date().toISOString()});
+        await db.collection('shop_products').doc(productId).update({ratingCount:firebase.firestore.FieldValue.increment(1)});
+    }
+    // Recalculate average
+    const allRatings=await db.collection('product_ratings').where('productId','==',productId).get();
+    let sum=0,count=0;
+    allRatings.forEach(doc=>{sum+=doc.data().rating;count++;});
+    const avgRating=count>0?sum/count:0;
+    await db.collection('shop_products').doc(productId).update({avgRating,ratingCount:count});
+    // Update UI stars
+    const parent=starEl.parentElement;
+    parent.querySelectorAll('.star').forEach((s,i)=>{s.classList.toggle('filled',i<rating);});
+    const infoEl=parent.nextElementSibling;
+    if(infoEl) infoEl.textContent=`⭐ ${avgRating.toFixed(1)} (${count})`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MY ORDERS
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadMyOrders(){
+    const c=document.getElementById('mem-orders');
+    if(!CU){c.innerHTML='<p class="note">Login to view orders.</p>';return;}
+    const snap=await db.collection('shop_orders').where('uid','==',CU.uid).orderBy('createdAt','desc').get();
+    let html='<div class="card"><h2>My Orders</h2>';
+    if(snap.empty) html+='<p class="note">No orders yet.</p>';
+    snap.forEach(doc=>{const o=doc.data();const badge=o.status==='completed'?'<span class="badge b-active">Completed</span>':o.status==='cancelled'?'<span class="badge b-blocked">Cancelled</span>':'<span class="badge b-pending">Pending</span>';
+        html+=`<div class="order-card ${o.status}"><div style="display:flex;justify-content:space-between;align-items:center"><b>₹${o.total.toLocaleString('en-IN')}</b> ${badge}</div><p style="font-size:10px;color:var(--muted);margin-top:4px">${new Date(o.createdAt).toLocaleString()}</p><p style="font-size:11px;margin-top:4px">${o.items.map(i=>i.name+' x'+i.qty).join(', ')}</p></div>`;});
+    html+='</div>';c.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGENT VIEW — Manages assigned shop with full product control
+// ═══════════════════════════════════════════════════════════════════════════════
+async function renderAgent(){
+    const mc=document.getElementById('mainContainer');
+    // Find shop assigned to this agent
+    const shopSnap=await db.collection('shops').where('agentId','==',CU.uid).get();
+    if(shopSnap.empty){mc.innerHTML=`<div class="card" style="text-align:center;padding:40px"><h2 style="border:none;text-transform:none;font-size:16px">No Shop Assigned</h2><p style="color:var(--muted);margin-top:8px">Admin has not assigned a shop to you yet. Please contact admin.</p></div>`;return;}
+    const shopDoc=shopSnap.docs[0];
+    const shopId=shopDoc.id;
+    const shopData=shopDoc.data();
+    document.getElementById('shopTitle').textContent=(shopData.shopIcon||'🏪')+' '+shopData.shopName;
+    mc.innerHTML=`<div class="tabs">
+        <div class="tab active" onclick="agentTab(this,'ag-profile','${shopId}')">🏪 My Shop</div>
+        <div class="tab" onclick="agentTab(this,'ag-products','${shopId}')">🏷 Products</div>
+        <div class="tab" onclick="agentTab(this,'ag-finance','${shopId}')">💰 Finance</div>
+        <div class="tab" onclick="agentTab(this,'ag-sales','${shopId}')">📈 Daily Sales</div>
+        <div class="tab" onclick="agentTab(this,'ag-expenses','${shopId}')">💸 Expenses</div>
+        <div class="tab" onclick="agentTab(this,'ag-loans','${shopId}')">🏦 Loans</div>
+        <div class="tab" onclick="agentTab(this,'ag-savings','${shopId}')">💎 Savings</div>
+        <div class="tab" onclick="agentTab(this,'ag-bills','${shopId}')">🧾 Bills</div>
+        <div class="tab" onclick="agentTab(this,'ag-orders','${shopId}')">📦 Orders</div>
+    </div>
+    <div id="ag-profile" class="tc active"></div><div id="ag-products" class="tc"></div><div id="ag-finance" class="tc"></div>
+    <div id="ag-sales" class="tc"></div><div id="ag-expenses" class="tc"></div><div id="ag-loans" class="tc"></div>
+    <div id="ag-savings" class="tc"></div><div id="ag-bills" class="tc"></div><div id="ag-orders" class="tc"></div>`;
+    loadAgentProfile('ag-profile',shopId);
+}
+function agentTab(el,id,shopId){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById(id).classList.add('active');
+    if(id==='ag-profile')loadAgentProfile('ag-profile',shopId);
+    if(id==='ag-products')loadAdminProducts('ag-products',shopId);
+    if(id==='ag-finance')loadFinanceDashboard('ag-finance',shopId);
+    if(id==='ag-sales')loadDailySales('ag-sales',shopId);
+    if(id==='ag-expenses')loadSmartExpenses('ag-expenses',shopId);
+    if(id==='ag-loans')loadLoans('ag-loans',shopId);
+    if(id==='ag-savings')loadSavingsManager('ag-savings',shopId);
+    if(id==='ag-bills')loadMonthlyBills('ag-bills',shopId);
+    if(id==='ag-orders')loadOrders('ag-orders',shopId);
+}
+
+async function loadAgentProfile(containerId,shopId){
+    const c=document.getElementById(containerId);
+    c.innerHTML='<p style="text-align:center;color:#999;padding:20px">Loading...</p>';
+    const shopDoc=await db.collection('shops').doc(shopId).get();
+    const shop=shopDoc.exists?shopDoc.data():{};
+    const prodSnap=await db.collection('shop_products').where('shopId','==',shopId).get();
+    const productCount=prodSnap.size;
+    const activeCount=prodSnap.docs.filter(d=>d.data().active).length;
+
+    let html=`<div class="card"><h2>🏪 My Shop Profile</h2>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+            <div style="font-size:48px">${shop.shopIcon||'🏪'}</div>
+            <div>
+                <div style="font-size:16px;font-weight:700">${shop.shopName||'My Shop'}</div>
+                <div style="font-size:11px;color:var(--muted)">${SHOP_TEMPLATES[shop.shopType]?.name||shop.shopType||'Custom'}</div>
+            </div>
+        </div>
+        <div class="row"><label>Shop Name:</label><input type="text" id="agShopName" value="${shop.shopName||''}"></div>
+        <div class="row"><label>Owner:</label><input type="text" id="agShopOwner" value="${shop.ownerName||''}"></div>
+        <div class="row"><label>Address:</label><input type="text" id="agShopAddr" value="${shop.address||''}"></div>
+        <div class="row"><label>Phone:</label><input type="text" id="agShopPhone" value="${shop.phone||''}"></div>
+        <button class="btn btn-primary" onclick="updateAgentShopDetails('${shopId}')">Save Details</button>
+        <div id="agProfileMsg"></div>
+    </div>`;
+
+    // Stats
+    html+=`<div class="card"><h2>Shop Stats</h2>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="val">${productCount}</div><div class="lbl">Total Products</div></div>
+            <div class="stat-card"><div class="val">${activeCount}</div><div class="lbl">Active/Visible</div></div>
+            <div class="stat-card"><div class="val">${productCount-activeCount}</div><div class="lbl">Hidden</div></div>
+        </div></div>`;
+
+    // Load default products button
+    if(shop.shopType && SHOP_TEMPLATES[shop.shopType]){
+        const template=SHOP_TEMPLATES[shop.shopType];
+        html+=`<div class="card"><h2>Template Products</h2>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:8px">Your shop type (<b>${template.name}</b>) has ${template.items.length} default products. You can add missing ones from template or reset all to defaults.</p>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-primary" onclick="addMissingTemplateProducts('${shopId}')">+ Add Missing Template Products</button>
+                <button class="btn btn-danger" onclick="resetToTemplate('${shopId}')">⚠️ Reset All to Defaults</button>
+            </div>
+            <div id="templateActionMsg" style="margin-top:8px"></div>
+        </div>`;
+    }
+
+    // Quick price update section
+    html+=`<div class="card"><h2>Quick Price Update</h2>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Set your own prices for all products. Go to Products tab for full control (add/delete/hide).</p>
+        <div id="quickPriceList">`;
+    prodSnap.forEach(doc=>{
+        const p=doc.data();
+        html+=`<div class="cart-item"><div style="flex:1"><b>${p.name}</b><br><span style="font-size:10px;color:var(--muted)">${p.category||'General'}</span></div>
+            <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:11px;color:var(--muted)">₹</span>
+                <input type="number" value="${p.price}" style="width:80px;max-width:80px;padding:5px;font-size:12px" id="qp_${doc.id}">
+                <button class="btn btn-sm btn-primary" onclick="quickUpdatePrice('${doc.id}','qp_${doc.id}')">✓</button>
+            </div></div>`;
+    });
+    html+=`</div></div>`;
+    c.innerHTML=html;
+}
+
+async function updateAgentShopDetails(shopId){
+    const shopName=document.getElementById('agShopName').value.trim();
+    const ownerName=document.getElementById('agShopOwner').value.trim();
+    const address=document.getElementById('agShopAddr').value.trim();
+    const phone=document.getElementById('agShopPhone').value.trim();
+    await db.collection('shops').doc(shopId).update({shopName,ownerName,address,phone});
+    document.getElementById('shopTitle').textContent=(document.getElementById('shopTitle').textContent.split(' ')[0]||'🏪')+' '+shopName;
+    document.getElementById('agProfileMsg').innerHTML='<div class="msg msg-ok">✅ Shop details updated!</div>';
+}
+
+async function quickUpdatePrice(prodId,inputId){
+    const val=parseFloat(document.getElementById(inputId).value);
+    if(isNaN(val)||val<=0){alert('Enter a valid price.');return;}
+    await db.collection('shop_products').doc(prodId).update({price:val});
+    document.getElementById(inputId).style.borderColor='#2E7D32';
+    setTimeout(()=>{document.getElementById(inputId).style.borderColor='';},1000);
+}
+
+async function addMissingTemplateProducts(shopId){
+    const shopDoc=await db.collection('shops').doc(shopId).get();
+    const shopData=shopDoc.data();
+    const template=SHOP_TEMPLATES[shopData.shopType];
+    if(!template){alert('No template found for this shop type.');return;}
+    const existingSnap=await db.collection('shop_products').where('shopId','==',shopId).get();
+    const existingNames=new Set();
+    existingSnap.forEach(doc=>existingNames.add(doc.data().name.toLowerCase()));
+    const missing=template.items.filter(i=>!existingNames.has(i.name.toLowerCase()));
+    if(!missing.length){document.getElementById('templateActionMsg').innerHTML='<div class="msg msg-ok">All template products already exist!</div>';return;}
+    const batch=db.batch();
+    missing.forEach(item=>{
+        const ref=db.collection('shop_products').doc();
+        batch.set(ref,{name:item.name,price:item.price,category:item.category,stock:100,active:true,imageUrl:'',shopId,likeCount:0,avgRating:0,ratingCount:0,createdAt:new Date().toISOString(),createdBy:CU.uid});
+    });
+    await batch.commit();
+    document.getElementById('templateActionMsg').innerHTML='<div class="msg msg-ok">✅ Added '+missing.length+' missing products!</div>';
+    setTimeout(()=>loadAgentProfile('ag-profile',shopId),1500);
+}
+
+async function resetToTemplate(shopId){
+    if(!confirm('⚠️ This will DELETE all current products and replace with template defaults. Continue?')) return;
+    if(!confirm('CONFIRM: All custom prices and products will be lost!')) return;
+    const shopDoc=await db.collection('shops').doc(shopId).get();
+    const shopData=shopDoc.data();
+    const template=SHOP_TEMPLATES[shopData.shopType];
+    if(!template){alert('No template found.');return;}
+    // Delete existing
+    const existingSnap=await db.collection('shop_products').where('shopId','==',shopId).get();
+    const delBatch=db.batch();existingSnap.forEach(doc=>delBatch.delete(doc.ref));await delBatch.commit();
+    // Add fresh template
+    const items=template.items;
+    for(let i=0;i<items.length;i+=500){
+        const batch=db.batch();
+        items.slice(i,i+500).forEach(item=>{
+            const ref=db.collection('shop_products').doc();
+            batch.set(ref,{name:item.name,price:item.price,category:item.category,stock:100,active:true,imageUrl:'',shopId,likeCount:0,avgRating:0,ratingCount:0,createdAt:new Date().toISOString(),createdBy:CU.uid});
+        });
+        await batch.commit();
+    }
+    alert('Reset complete! '+items.length+' products loaded from template.');
+    loadAgentProfile('ag-profile',shopId);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN VIEW
+// ═══════════════════════════════════════════════════════════════════════════════
+async function renderAdmin(){
+    const mc=document.getElementById('mainContainer');
+    mc.innerHTML=`<div class="tabs">
+        <div class="tab active" onclick="adminTab(this,'adm-dash')">📊 Dashboard</div>
+        <div class="tab" onclick="adminTab(this,'adm-shops')">🏪 Shops</div>
+        <div class="tab" onclick="adminTab(this,'adm-users')">👥 Users</div>
+        <div class="tab" onclick="adminTab(this,'adm-orders')">🛒 Orders</div>
+        <div class="tab" onclick="adminTab(this,'adm-expenses')">💸 Expenses</div>
+        <div class="tab" onclick="adminTab(this,'adm-sales')">📈 Sales</div>
+    </div>
+    <div id="adm-dash" class="tc active"></div><div id="adm-shops" class="tc"></div><div id="adm-users" class="tc"></div>
+    <div id="adm-orders" class="tc"></div><div id="adm-expenses" class="tc"></div><div id="adm-sales" class="tc"></div>`;
+    loadDashboard('adm-dash');
+}
+function adminTab(el,id){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById(id).classList.add('active');
+    if(id==='adm-dash')loadDashboard('adm-dash');if(id==='adm-shops')loadAdminShops();if(id==='adm-users')loadAdminUsers();
+    if(id==='adm-orders')loadOrders('adm-orders');if(id==='adm-expenses')loadExpenses('adm-expenses');if(id==='adm-sales')loadSalesReport('adm-sales');}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: SHOP MANAGEMENT — Create shops & assign agents
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadAdminShops(){
+    const c=document.getElementById('adm-shops');
+    c.innerHTML='<p style="text-align:center;color:#999;padding:20px">Loading...</p>';
+    // Get agents list
+    const usersSnap=await db.collection('shop_users').where('role','==','agent').get();
+    const agents=[];usersSnap.forEach(doc=>agents.push({id:doc.id,...doc.data()}));
+    // Get existing shops
+    const shopsSnap=await db.collection('shops').get();
+    const shops=[];shopsSnap.forEach(doc=>shops.push({id:doc.id,...doc.data()}));
+
+    let html=`<div class="card"><h2>Create New Shop</h2>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Select a shop type, fill details, and assign an agent to manage it.</p>
+        <p style="font-weight:600;font-size:12px;margin-bottom:6px">Shop Type:</p>
+        <div class="shop-type-grid" id="adminShopTypeGrid">`;
+    Object.keys(SHOP_TEMPLATES).forEach(key=>{
+        const t=SHOP_TEMPLATES[key];
+        html+=`<div class="shop-type-card" onclick="selectAdminShopType('${key}',this)"><div class="icon">${t.icon}</div><div class="name">${t.name}</div></div>`;
+    });
+    html+=`</div>
+        <div id="newShopForm" style="display:none;margin-top:12px">
+            <div class="row"><label>Shop Name:</label><input type="text" id="newShopName" placeholder="Shop name"></div>
+            <div class="row"><label>Owner:</label><input type="text" id="newShopOwner" placeholder="Owner name"></div>
+            <div class="row"><label>Address:</label><input type="text" id="newShopAddr" placeholder="Shop address"></div>
+            <div class="row"><label>Phone:</label><input type="text" id="newShopPhone" placeholder="Contact"></div>
+            <div class="row"><label>Assign Agent:</label><select id="newShopAgent"><option value="">— No Agent —</option>`;
+    agents.forEach(a=>{html+=`<option value="${a.id}">${a.name} (${a.email})</option>`;});
+    html+=`</select></div>
+            <button class="btn btn-accent btn-full" onclick="createShop()">🚀 Create Shop & Add Products</button>
+            <div id="createShopMsg"></div>
+        </div></div>`;
+
+    // Existing shops list
+    html+=`<div class="card"><h2>All Shops (${shops.length})</h2>`;
+    if(!shops.length) html+='<p class="note">No shops created yet.</p>';
+    shops.forEach(shop=>{
+        const agentName=shop.agentName||'Unassigned';
+        const statusBadge=shop.active?'<span class="badge b-active">Active</span>':'<span class="badge b-blocked">Inactive</span>';
+        html+=`<div class="cart-item" style="flex-wrap:wrap;gap:6px">
+            <div><b>${shop.shopIcon||''} ${shop.shopName}</b> ${statusBadge}<br>
+            <span style="font-size:10px;color:var(--muted)">Agent: ${agentName} | ${shop.address||'No address'} | Type: ${shop.shopType||'—'}</span></div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+                <button class="btn btn-sm btn-primary" onclick="openShopManage('${shop.id}')">Manage</button>
+                <button class="btn btn-sm btn-outline" onclick="reassignAgent('${shop.id}')">Assign Agent</button>
+                ${shop.active?`<button class="btn btn-sm btn-danger" onclick="toggleShopActive('${shop.id}',false)">Deactivate</button>`:`<button class="btn btn-sm btn-success" onclick="toggleShopActive('${shop.id}',true)">Activate</button>`}
+                <button class="btn btn-sm btn-danger" onclick="deleteShop('${shop.id}')">🗑</button>
+            </div></div>`;
+    });
+    html+='</div>';c.innerHTML=html;
+}
+
+let adminSelectedShopType=null;
+function selectAdminShopType(type,el){
+    adminSelectedShopType=type;
+    document.querySelectorAll('#adminShopTypeGrid .shop-type-card').forEach(c=>c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('newShopForm').style.display='block';
+    document.getElementById('newShopName').value=SHOP_TEMPLATES[type].name;
+}
+
+async function createShop(){
+    if(!adminSelectedShopType){alert('Select a shop type first.');return;}
+    const shopName=document.getElementById('newShopName').value.trim()||SHOP_TEMPLATES[adminSelectedShopType].name;
+    const ownerName=document.getElementById('newShopOwner').value.trim();
+    const address=document.getElementById('newShopAddr').value.trim();
+    const phone=document.getElementById('newShopPhone').value.trim();
+    const agentId=document.getElementById('newShopAgent').value;
+    let agentName='Unassigned';
+    if(agentId){const aDoc=await db.collection('shop_users').doc(agentId).get();if(aDoc.exists)agentName=aDoc.data().name||aDoc.data().email;}
+    if(!confirm('Create shop "'+shopName+'" with '+SHOP_TEMPLATES[adminSelectedShopType].items.length+' products?')) return;
+
+    const shopRef=await db.collection('shops').add({
+        shopType:adminSelectedShopType,shopName,shopIcon:SHOP_TEMPLATES[adminSelectedShopType].icon,
+        ownerName,address,phone,agentId:agentId||'',agentName,active:true,
+        createdBy:CU.uid,createdAt:new Date().toISOString()
+    });
+    // Add template products
+    const items=SHOP_TEMPLATES[adminSelectedShopType].items;
+    for(let i=0;i<items.length;i+=500){
+        const batch=db.batch();
+        items.slice(i,i+500).forEach(item=>{
+            const ref=db.collection('shop_products').doc();
+            batch.set(ref,{name:item.name,price:item.price,category:item.category,stock:100,active:true,imageUrl:'',shopId:shopRef.id,likeCount:0,avgRating:0,ratingCount:0,createdAt:new Date().toISOString(),createdBy:CU.uid});
+        });
+        await batch.commit();
+    }
+    document.getElementById('createShopMsg').innerHTML='<div class="msg msg-ok">✅ Shop created with '+items.length+' products!</div>';
+    setTimeout(()=>loadAdminShops(),1500);
+}
+
+async function reassignAgent(shopId){
+    const usersSnap=await db.collection('shop_users').where('role','==','agent').get();
+    const agents=[];usersSnap.forEach(doc=>agents.push({id:doc.id,...doc.data()}));
+    let options='0. No Agent\n'+agents.map((a,i)=>(i+1)+'. '+a.name+' ('+a.email+')').join('\n');
+    const choice=prompt('Enter agent number to assign (0 for none):\n'+options);
+    if(choice===null) return;
+    const idx=parseInt(choice);
+    let agentId='',agentName='Unassigned';
+    if(idx>0&&idx<=agents.length){agentId=agents[idx-1].id;agentName=agents[idx-1].name;}
+    await db.collection('shops').doc(shopId).update({agentId,agentName});
+    // Check if shop has products, if not populate from template
+    const shopDoc=await db.collection('shops').doc(shopId).get();
+    const shopData=shopDoc.data();
+    const prodSnap=await db.collection('shop_products').where('shopId','==',shopId).get();
+    if(prodSnap.empty && shopData.shopType && SHOP_TEMPLATES[shopData.shopType]){
+        const items=SHOP_TEMPLATES[shopData.shopType].items;
+        if(confirm('Shop has no products. Add '+items.length+' default products from template?')){
+            for(let i=0;i<items.length;i+=500){
+                const batch=db.batch();
+                items.slice(i,i+500).forEach(item=>{
+                    const ref=db.collection('shop_products').doc();
+                    batch.set(ref,{name:item.name,price:item.price,category:item.category,stock:100,active:true,imageUrl:'',shopId,likeCount:0,avgRating:0,ratingCount:0,createdAt:new Date().toISOString(),createdBy:CU.uid});
+                });
+                await batch.commit();
+            }
+            alert('Agent assigned & '+items.length+' default products added!');
+        } else {
+            alert('Agent assigned! They can add products from their dashboard.');
+        }
+    } else {
+        alert('Agent assigned! They now manage this shop\'s products.');
+    }
+    loadAdminShops();
+}
+
+async function toggleShopActive(shopId,active){await db.collection('shops').doc(shopId).update({active});loadAdminShops();}
+
+async function deleteShop(shopId){
+    if(!confirm('Delete this shop and all its products?')) return;
+    if(!confirm('CONFIRM: This cannot be undone!')) return;
+    // Delete products
+    const prodSnap=await db.collection('shop_products').where('shopId','==',shopId).get();
+    const batch=db.batch();prodSnap.forEach(doc=>batch.delete(doc.ref));batch.delete(db.collection('shops').doc(shopId));
+    await batch.commit();
+    alert('Shop deleted.');loadAdminShops();
+}
+
+function openShopManage(shopId){
+    // Switch to product management for that shop
+    const mc=document.getElementById('mainContainer');
+    mc.innerHTML=`<button class="btn btn-outline btn-sm" onclick="renderAdmin()" style="margin-bottom:10px">← Back to Admin</button>
+        <div id="shopManageProducts"></div>`;
+    loadAdminProducts('shopManageProducts',shopId);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRODUCTS MANAGEMENT (Admin/Agent per shop)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadAdminProducts(containerId,shopId){
+    const c=document.getElementById(containerId);
+    let query=db.collection('shop_products').orderBy('category');
+    if(shopId) query=db.collection('shop_products').where('shopId','==',shopId);
+    const snap=await query.get();
+    const docs=[...snap.docs].sort((a,b)=>(a.data().category||'').localeCompare(b.data().category||''));
+    let html=`<div class="card"><h2>Add New Product</h2>
+        <div class="row"><label>Name:</label><input type="text" id="prodName" placeholder="Product name"></div>
+        <div class="row"><label>Price (₹):</label><input type="number" id="prodPrice" placeholder="0"></div>
+        <div class="row"><label>Stock:</label><input type="number" id="prodStock" value="100"></div>
+        <div class="row"><label>Category:</label><input type="text" id="prodCat" placeholder="Category"></div>
+        <div class="row"><label>Image URL:</label><input type="url" id="prodImg" placeholder="https://..."></div>
+        <button class="btn btn-accent" onclick="addProduct('${containerId}','${shopId||''}')">+ Add Product</button>
+        <div id="prodMsg"></div></div>`;
+    html+=`<div class="card"><h2>All Products (${docs.length})</h2>`;
+    html+=`<input class="search-bar" type="text" placeholder="🔍 Search..." oninput="filterAdminProducts(this.value)">`;
+    html+='<div id="adminProductList">';
+    docs.forEach(doc=>{const p=doc.data();
+        html+=`<div class="cart-item admin-prod-item" data-name="${p.name.toLowerCase()}" data-cat="${(p.category||'').toLowerCase()}">
+            <div><b>${p.name}</b> — ₹${p.price.toLocaleString('en-IN')}<br><span style="font-size:10px;color:var(--muted)">${p.category||'General'} | Stock: ${p.stock} | ${p.active?'✅ Visible':'❌ Hidden'} | ❤️ ${p.likeCount||0} | ⭐ ${p.avgRating?(p.avgRating).toFixed(1):'—'}</span></div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+                <button class="btn btn-sm btn-primary" onclick="editPrice('${doc.id}',${p.price},'${containerId}','${shopId||''}')">₹ Price</button>
+                <button class="btn btn-sm btn-outline" onclick="editStock('${doc.id}',${p.stock},'${containerId}','${shopId||''}')">Stock</button>
+                ${p.active?`<button class="btn btn-danger btn-sm" onclick="toggleProd('${doc.id}',false,'${containerId}','${shopId||''}')">Hide</button>`:`<button class="btn btn-success btn-sm" onclick="toggleProd('${doc.id}',true,'${containerId}','${shopId||''}')">Show</button>`}
+                <button class="btn btn-danger btn-sm" onclick="deleteProd('${doc.id}','${containerId}','${shopId||''}')">🗑</button>
+            </div></div>`;});
+    html+='</div></div>';c.innerHTML=html;
+}
+function filterAdminProducts(q){q=q.toLowerCase();document.querySelectorAll('.admin-prod-item').forEach(c=>{c.style.display=(c.dataset.name.includes(q)||c.dataset.cat.includes(q))?'':'none';});}
+async function addProduct(cid,shopId){
+    const name=document.getElementById('prodName').value.trim(),price=parseFloat(document.getElementById('prodPrice').value),stock=parseInt(document.getElementById('prodStock').value)||0,category=document.getElementById('prodCat').value.trim(),imageUrl=document.getElementById('prodImg').value.trim();
+    if(!name||!price){alert('Name and price required.');return;}
+    await db.collection('shop_products').add({name,price,stock,category,imageUrl,active:true,shopId:shopId||'',likeCount:0,avgRating:0,ratingCount:0,createdAt:new Date().toISOString(),createdBy:CU.uid});
+    document.getElementById('prodMsg').innerHTML='<div class="msg msg-ok">✅ Added!</div>';
+    document.getElementById('prodName').value='';document.getElementById('prodPrice').value='';
+    setTimeout(()=>loadAdminProducts(cid,shopId),800);
+}
+async function editPrice(id,current,cid,shopId){const v=prompt('New price:',current);if(v===null)return;await db.collection('shop_products').doc(id).update({price:parseFloat(v)||current});loadAdminProducts(cid,shopId);}
+async function editStock(id,current,cid,shopId){const v=prompt('New stock:',current);if(v===null)return;await db.collection('shop_products').doc(id).update({stock:parseInt(v)||0});loadAdminProducts(cid,shopId);}
+async function toggleProd(id,active,cid,shopId){await db.collection('shop_products').doc(id).update({active});loadAdminProducts(cid,shopId);}
+async function deleteProd(id,cid,shopId){if(!confirm('Delete this product?'))return;await db.collection('shop_products').doc(id).delete();loadAdminProducts(cid,shopId);}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// USER MANAGEMENT (Admin)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadAdminUsers(){
+    const c=document.getElementById('adm-users');
+    const snap=await db.collection('shop_users').get();
+    let html='<div class="card"><h2>User Management</h2><p class="note" style="margin-bottom:10px">Roles: Member (browse, buy, like, rate), Agent (manages assigned shop), Admin (full control, assigns shops).</p>';
+    snap.forEach(doc=>{const u=doc.data();
+        const rb=u.role==='admin'?'<span class="badge b-admin">Admin</span>':u.role==='agent'?'<span class="badge b-agent">Agent</span>':'<span class="badge b-active">Member</span>';
+        const sb=u.status==='blocked'?'<span class="badge b-blocked">Blocked</span>':'';
+        const isMe=doc.id===CU.uid;
+        const actions=isMe?'<span style="font-size:10px;color:var(--muted)">(You)</span>':`
+            <select style="font-size:10px;padding:2px" onchange="changeRole('${doc.id}',this.value)"><option value="member" ${u.role==='member'?'selected':''}>Member</option><option value="agent" ${u.role==='agent'?'selected':''}>Agent</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select><br>
+            <button class="btn ${u.status==='blocked'?'btn-success':'btn-danger'} btn-sm" style="margin-top:2px" onclick="toggleStatus('${doc.id}','${u.status}')">${u.status==='blocked'?'Unblock':'Block'}</button>
+            <button class="btn btn-danger btn-sm" style="margin-top:2px" onclick="deleteUser('${doc.id}','${u.name}')">🗑</button>`;
+        html+=`<div class="cart-item"><div><b>${u.name}</b> ${rb} ${sb}<br><span style="font-size:10px;color:var(--muted)">${u.email} | ${u.phone||'—'}</span></div><div style="text-align:right">${actions}</div></div>`;});
+    html+='</div>';c.innerHTML=html;
+}
+async function changeRole(uid,role){await db.collection('shop_users').doc(uid).update({role});loadAdminUsers();}
+async function toggleStatus(uid,s){await db.collection('shop_users').doc(uid).update({status:s==='blocked'?'active':'blocked'});loadAdminUsers();}
+async function deleteUser(uid,name){if(!confirm('Delete "'+name+'"?'))return;if(!confirm('CONFIRM permanently?'))return;
+    const batch=db.batch();const oSnap=await db.collection('shop_orders').where('uid','==',uid).get();oSnap.forEach(doc=>batch.delete(doc.ref));batch.delete(db.collection('shop_users').doc(uid));await batch.commit();alert(name+' deleted.');loadAdminUsers();}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadDashboard(containerId,shopId){
+    const c=document.getElementById(containerId);
+    let accQuery=db.collection('shop_accounts');
+    if(shopId) accQuery=accQuery.where('shopId','==',shopId);
+    const accSnap=await accQuery.get();
+    let totalSales=0,totalExpenses=0;
+    accSnap.forEach(doc=>{const a=doc.data();if(a.type==='sale')totalSales+=a.amount;if(a.type==='expense')totalExpenses+=a.amount;});
+    let ordersQuery=db.collection('shop_orders');
+    if(shopId) ordersQuery=ordersQuery.where('shopId','==',shopId);
+    const ordersSnap=await ordersQuery.get();
+    const pending=ordersSnap.docs.filter(d=>d.data().status==='pending').length;
+    let prodQuery=db.collection('shop_products');
+    if(shopId) prodQuery=prodQuery.where('shopId','==',shopId);
+    const productsSnap=await prodQuery.get();
+    c.innerHTML=`<div class="card"><h2>Dashboard</h2>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="val">₹${totalSales.toLocaleString('en-IN')}</div><div class="lbl">Total Sales</div></div>
+            <div class="stat-card"><div class="val">₹${totalExpenses.toLocaleString('en-IN')}</div><div class="lbl">Expenses</div></div>
+            <div class="stat-card"><div class="val">₹${(totalSales-totalExpenses).toLocaleString('en-IN')}</div><div class="lbl">Net Profit</div></div>
+            <div class="stat-card"><div class="val">${pending}</div><div class="lbl">Pending Orders</div></div>
+            <div class="stat-card"><div class="val">${productsSnap.size}</div><div class="lbl">Products</div></div>
+            <div class="stat-card"><div class="val">${ordersSnap.size}</div><div class="lbl">Total Orders</div></div>
+        </div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ORDERS
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadOrders(containerId,shopId){
+    const c=document.getElementById(containerId);
+    let query=db.collection('shop_orders').orderBy('createdAt','desc');
+    if(shopId) query=db.collection('shop_orders').where('shopId','==',shopId);
+    const snap=await query.get();
+    const orderDocs=[...snap.docs].sort((a,b)=>(b.data().createdAt||'').localeCompare(a.data().createdAt||''));
+    let html='<div class="card"><h2>All Orders</h2>';
+    if(!orderDocs.length) html+='<p class="note">No orders yet.</p>';
+    orderDocs.forEach(doc=>{const o=doc.data();
+        const badge=o.status==='completed'?'<span class="badge b-active">Completed</span>':o.status==='cancelled'?'<span class="badge b-blocked">Cancelled</span>':'<span class="badge b-pending">Pending</span>';
+        const actions=o.status==='pending'?`<button class="btn btn-success btn-sm" onclick="updateOrder('${doc.id}','completed')">✓ Complete</button> <button class="btn btn-danger btn-sm" onclick="updateOrder('${doc.id}','cancelled')">✕ Cancel</button>`:'';
+        html+=`<div class="order-card ${o.status}"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px"><div><b>${o.memberName}</b> — ₹${o.total.toLocaleString('en-IN')} ${badge}</div><div>${actions}</div></div><p style="font-size:10px;color:var(--muted);margin-top:4px">${new Date(o.createdAt).toLocaleString()}</p><p style="font-size:11px;margin-top:4px">${o.items.map(i=>i.name+' x'+i.qty).join(', ')}</p></div>`;});
+    html+='</div>';c.innerHTML=html;
+}
+async function updateOrder(id,status){await db.collection('shop_orders').doc(id).update({status,updatedAt:new Date().toISOString()});renderApp();}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPENSES
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadExpenses(containerId,shopId){
+    const c=document.getElementById(containerId);
+    let query=db.collection('shop_accounts').where('type','==','expense').orderBy('date','desc');
+    if(shopId) query=db.collection('shop_accounts').where('type','==','expense').where('shopId','==',shopId);
+    const snap=await query.get();
+    let html=`<div class="card"><h2>Add Expense</h2>
+        <div class="row"><label>Amount (₹):</label><input type="number" id="expAmt" placeholder="0"></div>
+        <div class="row"><label>Description:</label><input type="text" id="expDesc" placeholder="What was it for?"></div>
+        <div class="row"><label>Date:</label><input type="date" id="expDate" value="${new Date().toISOString().split('T')[0]}"></div>
+        <div class="row"><label>Category:</label><select id="expCat"><option>Rent</option><option>Utilities</option><option>Supplies</option><option>Transport</option><option>Salary</option><option>Maintenance</option><option>Stock Purchase</option><option>Other</option></select></div>
+        <button class="btn btn-accent" onclick="addExpense('${containerId}','${shopId||''}')">+ Add Expense</button><div id="expMsg"></div></div>`;
+    html+='<div class="card"><h2>Recent Expenses</h2>';let total=0;
+    snap.forEach(doc=>{const e=doc.data();total+=e.amount;html+=`<div class="cart-item"><div><b>${e.description}</b><br><span style="font-size:10px;color:var(--muted)">${e.category||''} | ${new Date(e.date).toLocaleDateString()}</span></div><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:var(--danger)">₹${e.amount.toLocaleString('en-IN')}</span><button class="btn btn-danger btn-sm" onclick="delAcc('${doc.id}','${containerId}','${shopId||''}')">🗑</button></div></div>`;});
+    html+=`<div style="text-align:right;padding:8px;font-weight:700;color:var(--danger)">Total: ₹${total.toLocaleString('en-IN')}</div></div>`;c.innerHTML=html;
+}
+async function addExpense(cid,shopId){const amount=parseFloat(document.getElementById('expAmt').value),description=document.getElementById('expDesc').value.trim(),date=document.getElementById('expDate').value,category=document.getElementById('expCat').value;
+    if(!amount||!description){alert('Enter amount & description.');return;}
+    await db.collection('shop_accounts').add({type:'expense',amount,description,category,date,shopId:shopId||'',createdBy:CU.uid,createdAt:new Date().toISOString()});
+    document.getElementById('expMsg').innerHTML='<div class="msg msg-ok">✅ Expense added!</div>';setTimeout(()=>loadExpenses(cid,shopId),800);}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SALES REPORT
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadSalesReport(containerId,shopId){
+    const c=document.getElementById(containerId);
+    let query=db.collection('shop_accounts').where('type','==','sale').orderBy('date','desc');
+    if(shopId) query=db.collection('shop_accounts').where('type','==','sale').where('shopId','==',shopId);
+    const snap=await query.get();
+    let html='<div class="card"><h2>Sales Report</h2>';let total=0,thisMonth=0;
+    const monthStart=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString();
+    snap.forEach(doc=>{const s=doc.data();total+=s.amount;if(s.date>=monthStart)thisMonth+=s.amount;
+        html+=`<div class="cart-item"><div><b>${s.description}</b><br><span style="font-size:10px;color:var(--muted)">${new Date(s.date).toLocaleDateString()}</span></div><div style="font-weight:700;color:var(--primary)">₹${s.amount.toLocaleString('en-IN')}</div></div>`;});
+    html+=`<div style="padding:8px;font-size:12px"><b>This Month: ₹${thisMonth.toLocaleString('en-IN')}</b> | <b>All Time: ₹${total.toLocaleString('en-IN')}</b></div></div>`;c.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DELETE ACCOUNT ENTRY
+// ═══════════════════════════════════════════════════════════════════════════════
+async function delAcc(id,cid,shopId){if(!confirm('Delete this entry?'))return;await db.collection('shop_accounts').doc(id).delete();
+    if(cid.includes('expense'))loadSmartExpenses(cid,shopId);else loadExpenses(cid,shopId);}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGENT FINANCE DASHBOARD — Overview of all money in/out
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadFinanceDashboard(containerId,shopId){
+    const c=document.getElementById(containerId);
+    c.innerHTML='<p style="text-align:center;color:#999;padding:20px">Calculating finances...</p>';
+    const now=new Date();
+    const thisMonthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString().split('T')[0];
+    const thisQuarterMonth=Math.floor(now.getMonth()/3)*3;
+    const thisQuarterStart=new Date(now.getFullYear(),thisQuarterMonth,1).toISOString().split('T')[0];
+    
+    // Get all financial data for this shop
+    const accSnap=await db.collection('shop_accounts').where('shopId','==',shopId).get();
+    const loanSnap=await db.collection('shop_loans').where('shopId','==',shopId).get();
+    const savSnap=await db.collection('shop_savings').where('shopId','==',shopId).get();
+    const billSnap=await db.collection('shop_bills').where('shopId','==',shopId).get();
+
+    let totalSales=0,monthSales=0,totalExpenses=0,monthExpenses=0,quarterExpenses=0;
+    accSnap.forEach(doc=>{
+        const a=doc.data();
+        if(a.type==='sale'){totalSales+=a.amount;if(a.date>=thisMonthStart)monthSales+=a.amount;}
+        if(a.type==='expense'){totalExpenses+=a.amount;if(a.date>=thisMonthStart)monthExpenses+=a.amount;if(a.date>=thisQuarterStart)quarterExpenses+=a.amount;}
+    });
+
+    let totalLoans=0,totalRepaid=0,activeLoans=0;
+    loanSnap.forEach(doc=>{const l=doc.data();totalLoans+=l.amount;totalRepaid+=(l.repaid||0);if(!l.closed)activeLoans++;});
+    const loanBalance=totalLoans-totalRepaid;
+
+    let totalSavings=0,monthSavings=0;
+    savSnap.forEach(doc=>{const s=doc.data();totalSavings+=s.amount;if(s.date>=thisMonthStart)monthSavings+=s.amount;});
+
+    let monthBills=0;
+    billSnap.forEach(doc=>{const b=doc.data();if(b.date>=thisMonthStart)monthBills+=b.amount;});
+
+    const netProfit=totalSales-totalExpenses-monthBills;
+    const monthNet=monthSales-monthExpenses-monthBills;
+
+    let html=`<div class="card"><h2>💰 Finance Dashboard — ${new Date().toLocaleDateString('en-IN',{month:'long',year:'numeric'})}</h2>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="val" style="color:var(--success)">₹${monthSales.toLocaleString('en-IN')}</div><div class="lbl">This Month Sales</div></div>
+            <div class="stat-card"><div class="val" style="color:var(--danger)">₹${monthExpenses.toLocaleString('en-IN')}</div><div class="lbl">This Month Expenses</div></div>
+            <div class="stat-card"><div class="val" style="color:var(--warning)">₹${monthBills.toLocaleString('en-IN')}</div><div class="lbl">This Month Bills</div></div>
+            <div class="stat-card"><div class="val" style="color:${monthNet>=0?'var(--success)':'var(--danger)'}">₹${monthNet.toLocaleString('en-IN')}</div><div class="lbl">Monthly Net</div></div>
+            <div class="stat-card"><div class="val" style="color:var(--info)">₹${totalSavings.toLocaleString('en-IN')}</div><div class="lbl">Total Savings</div></div>
+            <div class="stat-card"><div class="val" style="color:${loanBalance>0?'var(--danger)':'var(--success)'}">₹${loanBalance.toLocaleString('en-IN')}</div><div class="lbl">Loan Balance</div></div>
+            <div class="stat-card"><div class="val">${activeLoans}</div><div class="lbl">Active Loans</div></div>
+            <div class="stat-card"><div class="val" style="color:var(--danger)">₹${quarterExpenses.toLocaleString('en-IN')}</div><div class="lbl">Quarter Expenses</div></div>
+        </div></div>`;
+
+    // Growth indicator
+    html+=`<div class="card"><h2>📊 Growth Summary</h2>
+        <div style="padding:8px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px">All-Time Sales</span><b style="color:var(--success)">₹${totalSales.toLocaleString('en-IN')}</b></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px">All-Time Expenses</span><b style="color:var(--danger)">₹${totalExpenses.toLocaleString('en-IN')}</b></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px">Bills Paid (this month)</span><b style="color:var(--warning)">₹${monthBills.toLocaleString('en-IN')}</b></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px">Total Loans Taken</span><b>₹${totalLoans.toLocaleString('en-IN')}</b></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px">Total Loan Repaid</span><b style="color:var(--success)">₹${totalRepaid.toLocaleString('en-IN')}</b></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px">Loan Balance (outstanding)</span><b style="color:var(--danger)">₹${loanBalance.toLocaleString('en-IN')}</b></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px">Total Savings</span><b style="color:var(--info)">₹${totalSavings.toLocaleString('en-IN')}</b></div>
+            <hr style="margin:10px 0;border-color:#eee">
+            <div style="display:flex;justify-content:space-between;font-size:14px"><span><b>Net Profit (Sales − All Expenses)</b></span><b style="color:${netProfit>=0?'var(--success)':'var(--danger)'}">₹${netProfit.toLocaleString('en-IN')}</b></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:6px"><span><b>True Wealth (Savings − Loan Balance)</b></span><b style="color:${(totalSavings-loanBalance)>=0?'var(--success)':'var(--danger)'}">₹${(totalSavings-loanBalance).toLocaleString('en-IN')}</b></div>
+        </div></div>`;
+    c.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DAILY SALES — Agent logs each day's sales manually + auto from orders
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadDailySales(containerId,shopId){
+    const c=document.getElementById(containerId);
+    const today=new Date().toISOString().split('T')[0];
+    const snap=await db.collection('shop_accounts').where('type','==','sale').where('shopId','==',shopId).get();
+    
+    let html=`<div class="card"><h2>📈 Record Today's Sale</h2>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Manually enter your daily sales amount. Record at end of each day to track your shop's growth.</p>
+        <div class="row"><label>Amount (₹):</label><input type="number" id="saleDayAmt" placeholder="Today's total sales"></div>
+        <div class="row"><label>Date:</label><input type="date" id="saleDayDate" value="${today}"></div>
+        <div class="row"><label>Notes:</label><input type="text" id="saleDayNote" placeholder="e.g. Good day, festival rush, slow day"></div>
+        <button class="btn btn-success btn-full" onclick="addDailySale('${containerId}','${shopId}')">💰 Record Daily Sale</button>
+        <div id="saleDayMsg"></div></div>`;
+
+    // Sales history with monthly totals
+    let monthTotals={},grandTotal=0;
+    const entries=[];
+    snap.forEach(doc=>{const s=doc.data();entries.push({id:doc.id,...s});grandTotal+=s.amount;
+        const monthKey=s.date?s.date.substring(0,7):'unknown';
+        monthTotals[monthKey]=(monthTotals[monthKey]||0)+s.amount;});
+    entries.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+    // Monthly summary
+    html+=`<div class="card"><h2>Monthly Sales Summary</h2>`;
+    const sortedMonths=Object.keys(monthTotals).sort().reverse();
+    if(sortedMonths.length){
+        sortedMonths.forEach(m=>{
+            const [y,mo]=m.split('-');
+            const label=new Date(y,mo-1).toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+            html+=`<div class="cart-item"><div><b>${label}</b></div><div style="font-weight:700;color:var(--success)">₹${monthTotals[m].toLocaleString('en-IN')}</div></div>`;
+        });
+        html+=`<div style="text-align:right;padding:8px;font-weight:700;color:var(--primary)">All-Time Total: ₹${grandTotal.toLocaleString('en-IN')}</div>`;
+    } else html+='<p class="note">No sales recorded yet.</p>';
+    html+=`</div>`;
+
+    // Recent entries
+    html+=`<div class="card"><h2>Recent Sales Entries</h2>`;
+    entries.slice(0,20).forEach(s=>{
+        html+=`<div class="cart-item"><div><b>${s.description||'Daily Sale'}</b><br><span style="font-size:10px;color:var(--muted)">${new Date(s.date).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}</span></div><div style="display:flex;align-items:center;gap:4px"><span style="font-weight:700;color:var(--success)">₹${s.amount.toLocaleString('en-IN')}</span><button class="btn btn-sm btn-outline" onclick="editSaleEntry('${s.id}',${s.amount},'${containerId}','${shopId}')">✏️</button><button class="btn btn-danger btn-sm" onclick="delFinEntry('${s.id}','${containerId}','${shopId}','sale')">🗑</button></div></div>`;
+    });
+    if(!entries.length) html+='<p class="note">No entries yet. Start recording your daily sales!</p>';
+    html+=`</div>`;
+    c.innerHTML=html;
+}
+
+async function addDailySale(cid,shopId){
+    const amount=parseFloat(document.getElementById('saleDayAmt').value);
+    const date=document.getElementById('saleDayDate').value;
+    const note=document.getElementById('saleDayNote').value.trim();
+    if(!amount||amount<=0){alert('Enter a valid sale amount.');return;}
+    await db.collection('shop_accounts').add({type:'sale',amount,description:note||'Daily Sale',date,shopId,createdBy:CU.uid,createdAt:new Date().toISOString()});
+    document.getElementById('saleDayMsg').innerHTML='<div class="msg msg-ok">✅ Sale recorded: ₹'+amount.toLocaleString('en-IN')+'</div>';
+    document.getElementById('saleDayAmt').value='';document.getElementById('saleDayNote').value='';
+    setTimeout(()=>loadDailySales(cid,shopId),800);
+}
+
+async function editSaleEntry(id,currentAmt,cid,shopId){
+    const val=prompt('Update sale amount (₹):',currentAmt);
+    if(val===null) return;
+    const newAmt=parseFloat(val);
+    if(isNaN(newAmt)||newAmt<=0){alert('Invalid amount.');return;}
+    await db.collection('shop_accounts').doc(id).update({amount:newAmt});
+    alert('Sale updated to ₹'+newAmt.toLocaleString('en-IN'));
+    loadDailySales(cid,shopId);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SMART EXPENSES — Daily, Monthly, Quarterly with categories
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadSmartExpenses(containerId,shopId){
+    const c=document.getElementById(containerId);
+    const today=new Date().toISOString().split('T')[0];
+    const now=new Date();
+    const thisMonthStart=new Date(now.getFullYear(),now.getMonth(),1).toISOString().split('T')[0];
+    const thisQuarterMonth=Math.floor(now.getMonth()/3)*3;
+    const thisQuarterStart=new Date(now.getFullYear(),thisQuarterMonth,1).toISOString().split('T')[0];
+
+    const snap=await db.collection('shop_accounts').where('type','==','expense').where('shopId','==',shopId).get();
+
+    let html=`<div class="card"><h2>💸 Add Expense</h2>
+        <div class="row"><label>Amount (₹):</label><input type="number" id="sexpAmt" placeholder="0"></div>
+        <div class="row"><label>Description:</label><input type="text" id="sexpDesc" placeholder="What was it for?"></div>
+        <div class="row"><label>Date:</label><input type="date" id="sexpDate" value="${today}"></div>
+        <div class="row"><label>Category:</label><select id="sexpCat">
+            <option value="Consumables">Consumables (daily supplies)</option>
+            <option value="Stock Purchase">Stock Purchase</option>
+            <option value="Transport">Transport</option>
+            <option value="Salary">Staff Salary</option>
+            <option value="Maintenance">Maintenance/Repair</option>
+            <option value="Marketing">Marketing/Ads</option>
+            <option value="Packaging">Packaging</option>
+            <option value="Miscellaneous">Miscellaneous</option>
+        </select></div>
+        <div class="row"><label>Period:</label><select id="sexpPeriod">
+            <option value="daily">Daily</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="one-time">One-Time</option>
+        </select></div>
+        <button class="btn btn-accent" onclick="addSmartExpense('${containerId}','${shopId}')">+ Add Expense</button>
+        <div id="sexpMsg"></div></div>`;
+
+    // Categorize expenses
+    let dayTotal=0,monthTotal=0,quarterTotal=0,allTotal=0;
+    let catTotals={};
+    const entries=[];
+    snap.forEach(doc=>{
+        const e=doc.data();entries.push({id:doc.id,...e});allTotal+=e.amount;
+        if(e.date>=thisMonthStart)monthTotal+=e.amount;
+        if(e.date>=thisQuarterStart)quarterTotal+=e.amount;
+        if(e.date===today)dayTotal+=e.amount;
+        catTotals[e.category||'Other']=(catTotals[e.category||'Other']||0)+e.amount;
+    });
+    entries.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+    // Summary cards
+    html+=`<div class="card"><h2>Expense Summary</h2>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="val" style="color:var(--danger)">₹${dayTotal.toLocaleString('en-IN')}</div><div class="lbl">Today</div></div>
+            <div class="stat-card"><div class="val" style="color:var(--danger)">₹${monthTotal.toLocaleString('en-IN')}</div><div class="lbl">This Month</div></div>
+            <div class="stat-card"><div class="val" style="color:var(--warning)">₹${quarterTotal.toLocaleString('en-IN')}</div><div class="lbl">This Quarter</div></div>
+            <div class="stat-card"><div class="val">₹${allTotal.toLocaleString('en-IN')}</div><div class="lbl">All Time</div></div>
+        </div></div>`;
+
+    // Category breakdown
+    html+=`<div class="card"><h2>By Category</h2>`;
+    Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt])=>{
+        const pct=allTotal>0?Math.round(amt/allTotal*100):0;
+        html+=`<div class="cart-item"><div><b>${cat}</b><br><span style="font-size:10px;color:var(--muted)">${pct}% of total</span></div><div style="font-weight:700;color:var(--danger)">₹${amt.toLocaleString('en-IN')}</div></div>`;
+    });
+    html+=`</div>`;
+
+    // Recent entries
+    html+=`<div class="card"><h2>Recent Expenses</h2>`;
+    entries.slice(0,25).forEach(e=>{
+        html+=`<div class="cart-item"><div><b>${e.description}</b><br><span style="font-size:10px;color:var(--muted)">${e.category||'—'} | ${e.period||'—'} | ${new Date(e.date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span></div><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:var(--danger)">₹${e.amount.toLocaleString('en-IN')}</span><button class="btn btn-danger btn-sm" onclick="delFinEntry('${e.id}','${containerId}','${shopId}','expense')">🗑</button></div></div>`;
+    });
+    if(!entries.length) html+='<p class="note">No expenses recorded yet.</p>';
+    html+=`</div>`;
+    c.innerHTML=html;
+}
+
+async function addSmartExpense(cid,shopId){
+    const amount=parseFloat(document.getElementById('sexpAmt').value);
+    const description=document.getElementById('sexpDesc').value.trim();
+    const date=document.getElementById('sexpDate').value;
+    const category=document.getElementById('sexpCat').value;
+    const period=document.getElementById('sexpPeriod').value;
+    if(!amount||!description){alert('Enter amount & description.');return;}
+    await db.collection('shop_accounts').add({type:'expense',amount,description,category,period,date,shopId,createdBy:CU.uid,createdAt:new Date().toISOString()});
+    document.getElementById('sexpMsg').innerHTML='<div class="msg msg-ok">✅ Expense added!</div>';
+    setTimeout(()=>loadSmartExpenses(cid,shopId),800);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOANS — Track loans taken, EMI/repayments
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadLoans(containerId,shopId){
+    const c=document.getElementById(containerId);
+    const today=new Date().toISOString().split('T')[0];
+    const snap=await db.collection('shop_loans').where('shopId','==',shopId).get();
+
+    let html=`<div class="card"><h2>🏦 Add New Loan</h2>
+        <div class="row"><label>Loan Amount (₹):</label><input type="number" id="loanAmt" placeholder="Total loan amount"></div>
+        <div class="row"><label>Source:</label><input type="text" id="loanSource" placeholder="Bank / Person / NBF"></div>
+        <div class="row"><label>Purpose:</label><input type="text" id="loanPurpose" placeholder="Shop setup, stock, etc."></div>
+        <div class="row"><label>Monthly EMI (₹):</label><input type="number" id="loanEmi" placeholder="Monthly payment"></div>
+        <div class="row"><label>Interest %:</label><input type="number" id="loanInterest" placeholder="Annual interest" step="0.1"></div>
+        <div class="row"><label>Start Date:</label><input type="date" id="loanDate" value="${today}"></div>
+        <div class="row"><label>Tenure (months):</label><input type="number" id="loanTenure" placeholder="12"></div>
+        <button class="btn btn-accent" onclick="addLoan('${containerId}','${shopId}')">+ Add Loan</button>
+        <div id="loanMsg"></div></div>`;
+
+    // Active loans
+    let totalOwed=0,totalRepaid=0;
+    html+=`<div class="card"><h2>Active Loans</h2>`;
+    const loans=[];
+    snap.forEach(doc=>{loans.push({id:doc.id,...doc.data()});});
+    loans.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+    const active=loans.filter(l=>!l.closed);
+    const closed=loans.filter(l=>l.closed);
+
+    if(!active.length) html+='<p class="note">No active loans.</p>';
+    active.forEach(l=>{
+        const repaid=l.repaid||0;
+        const balance=l.amount-repaid;
+        totalOwed+=balance;totalRepaid+=repaid;
+        const pct=l.amount>0?Math.round(repaid/l.amount*100):0;
+        html+=`<div style="background:#f9f9f9;border-radius:10px;padding:12px;margin-bottom:10px;border-left:4px solid var(--warning)">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
+                <div><b>${l.source||'Loan'}</b> — ${l.purpose||''}<br>
+                <span style="font-size:10px;color:var(--muted)">Started: ${new Date(l.startDate||l.createdAt).toLocaleDateString('en-IN')} | EMI: ₹${(l.emi||0).toLocaleString('en-IN')}/mo | ${l.interest||0}% p.a. | ${l.tenure||'—'} months</span></div>
+                <div style="text-align:right"><b style="color:var(--danger)">₹${balance.toLocaleString('en-IN')}</b><br><span style="font-size:10px;color:var(--success)">${pct}% repaid</span></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin:6px 0;font-size:11px;color:var(--muted)"><span>Loan: ₹${l.amount.toLocaleString('en-IN')}</span><span>Repaid: ₹${repaid.toLocaleString('en-IN')}</span><span>Balance: ₹${balance.toLocaleString('en-IN')}</span></div>
+            <div style="background:#e0e0e0;border-radius:4px;height:6px;margin:4px 0"><div style="background:var(--success);height:6px;border-radius:4px;width:${pct}%"></div></div>
+            <div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">
+                <button class="btn btn-sm btn-success" onclick="repayLoan('${l.id}','${containerId}','${shopId}')">💵 Repayment</button>
+                <button class="btn btn-sm btn-outline" onclick="editLoanAmount('${l.id}',${l.amount},'${containerId}','${shopId}')">✏️ Edit Amount</button>
+                <button class="btn btn-sm btn-outline" onclick="editLoanEmi('${l.id}',${l.emi||0},'${containerId}','${shopId}')">✏️ Edit EMI</button>
+                <button class="btn btn-sm btn-primary" onclick="closeLoan('${l.id}','${containerId}','${shopId}')">✓ Close</button>
+            </div></div>`;
+    });
+    html+=`<div style="padding:8px;font-size:12px"><b style="color:var(--danger)">Total Outstanding: ₹${totalOwed.toLocaleString('en-IN')}</b> | <b style="color:var(--success)">Total Repaid: ₹${totalRepaid.toLocaleString('en-IN')}</b></div></div>`;
+
+    // Closed loans
+    if(closed.length){
+        html+=`<div class="card"><h2>Closed Loans</h2>`;
+        closed.forEach(l=>{
+            html+=`<div class="cart-item"><div><b>${l.source}</b> — ${l.purpose||''}<br><span style="font-size:10px;color:var(--muted)">₹${l.amount.toLocaleString('en-IN')} | Closed</span></div><span class="badge b-active">Paid ✓</span></div>`;
+        });
+        html+=`</div>`;
+    }
+    c.innerHTML=html;
+}
+
+async function addLoan(cid,shopId){
+    const amount=parseFloat(document.getElementById('loanAmt').value);
+    const source=document.getElementById('loanSource').value.trim();
+    const purpose=document.getElementById('loanPurpose').value.trim();
+    const emi=parseFloat(document.getElementById('loanEmi').value)||0;
+    const interest=parseFloat(document.getElementById('loanInterest').value)||0;
+    const startDate=document.getElementById('loanDate').value;
+    const tenure=parseInt(document.getElementById('loanTenure').value)||0;
+    if(!amount||!source){alert('Enter loan amount and source.');return;}
+    await db.collection('shop_loans').add({amount,source,purpose,emi,interest,startDate,tenure,repaid:0,closed:false,shopId,createdBy:CU.uid,createdAt:new Date().toISOString()});
+    document.getElementById('loanMsg').innerHTML='<div class="msg msg-ok">✅ Loan added!</div>';
+    setTimeout(()=>loadLoans(cid,shopId),800);
+}
+
+async function repayLoan(loanId,cid,shopId){
+    const amount=prompt('Enter repayment amount (₹):');
+    if(!amount) return;
+    const val=parseFloat(amount);
+    if(isNaN(val)||val<=0){alert('Invalid amount.');return;}
+    const dateStr=prompt('Repayment date (YYYY-MM-DD):',new Date().toISOString().split('T')[0]);
+    if(!dateStr) return;
+    await db.collection('shop_loans').doc(loanId).update({repaid:firebase.firestore.FieldValue.increment(val)});
+    // Log repayment entry
+    await db.collection('shop_loan_payments').add({loanId,amount:val,date:dateStr,shopId,createdBy:CU.uid,createdAt:new Date().toISOString()});
+    // Also log as expense
+    await db.collection('shop_accounts').add({type:'expense',amount:val,description:'Loan Repayment',category:'Loan Repayment',period:'monthly',date:dateStr,shopId,createdBy:CU.uid,createdAt:new Date().toISOString()});
+    alert('Repayment of ₹'+val.toLocaleString('en-IN')+' recorded.');
+    loadLoans(cid,shopId);
+}
+
+async function editLoanAmount(loanId,currentAmt,cid,shopId){
+    const val=prompt('Update total loan amount (₹):',currentAmt);
+    if(val===null) return;
+    const newAmt=parseFloat(val);
+    if(isNaN(newAmt)||newAmt<=0){alert('Invalid amount.');return;}
+    await db.collection('shop_loans').doc(loanId).update({amount:newAmt});
+    alert('Loan amount updated to ₹'+newAmt.toLocaleString('en-IN'));
+    loadLoans(cid,shopId);
+}
+
+async function editLoanEmi(loanId,currentEmi,cid,shopId){
+    const val=prompt('Update monthly EMI (₹):',currentEmi);
+    if(val===null) return;
+    const newEmi=parseFloat(val);
+    if(isNaN(newEmi)||newEmi<0){alert('Invalid amount.');return;}
+    await db.collection('shop_loans').doc(loanId).update({emi:newEmi});
+    alert('EMI updated to ₹'+newEmi.toLocaleString('en-IN'));
+    loadLoans(cid,shopId);
+}
+
+async function closeLoan(loanId,cid,shopId){
+    if(!confirm('Mark this loan as fully closed/paid?')) return;
+    await db.collection('shop_loans').doc(loanId).update({closed:true,closedAt:new Date().toISOString()});
+    loadLoans(cid,shopId);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SAVINGS — Monthly savings tracking
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadSavingsManager(containerId,shopId){
+    const c=document.getElementById(containerId);
+    const today=new Date().toISOString().split('T')[0];
+    const snap=await db.collection('shop_savings').where('shopId','==',shopId).get();
+
+    let html=`<div class="card"><h2>💎 Add Savings</h2>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Track how much you save each month from your shop profits.</p>
+        <div class="row"><label>Amount (₹):</label><input type="number" id="savAmt" placeholder="Amount saved"></div>
+        <div class="row"><label>Where:</label><select id="savWhere"><option>Bank Account</option><option>Fixed Deposit</option><option>Cash at Home</option><option>Gold/Jewellery</option><option>Chit Fund</option><option>Mutual Fund</option><option>Other</option></select></div>
+        <div class="row"><label>Date:</label><input type="date" id="savDate" value="${today}"></div>
+        <div class="row"><label>Note:</label><input type="text" id="savNote" placeholder="Optional note"></div>
+        <button class="btn btn-success" onclick="addSaving('${containerId}','${shopId}')">💎 Save</button>
+        <div id="savMsg2"></div></div>`;
+
+    // Summary
+    let totalSaved=0,monthlyTotals={};
+    const entries=[];
+    snap.forEach(doc=>{const s=doc.data();entries.push({id:doc.id,...s});totalSaved+=s.amount;
+        const mk=s.date?s.date.substring(0,7):'unknown';monthlyTotals[mk]=(monthlyTotals[mk]||0)+s.amount;});
+    entries.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+    html+=`<div class="card"><h2>Savings Overview</h2>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="val" style="color:var(--info)">₹${totalSaved.toLocaleString('en-IN')}</div><div class="lbl">Total Saved</div></div>
+            <div class="stat-card"><div class="val">${entries.length}</div><div class="lbl">Entries</div></div>
+        </div>`;
+    // Monthly breakdown
+    const sortedMonths=Object.keys(monthlyTotals).sort().reverse();
+    if(sortedMonths.length){
+        html+='<h3 style="font-size:11px;color:var(--primary);margin:10px 0 6px">Monthly Savings:</h3>';
+        sortedMonths.slice(0,6).forEach(m=>{
+            const [y,mo]=m.split('-');
+            const label=new Date(y,mo-1).toLocaleDateString('en-IN',{month:'short',year:'numeric'});
+            html+=`<div class="cart-item"><div><b>${label}</b></div><div style="font-weight:700;color:var(--info)">₹${monthlyTotals[m].toLocaleString('en-IN')}</div></div>`;
+        });
+    }
+    html+=`</div>`;
+
+    // Recent entries
+    html+=`<div class="card"><h2>Savings History</h2>`;
+    entries.slice(0,20).forEach(s=>{
+        html+=`<div class="cart-item"><div><b>${s.where||'Savings'}</b>${s.note?' — '+s.note:''}<br><span style="font-size:10px;color:var(--muted)">${new Date(s.date).toLocaleDateString('en-IN')}</span></div><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:var(--info)">₹${s.amount.toLocaleString('en-IN')}</span><button class="btn btn-danger btn-sm" onclick="delFinEntry('${s.id}','${containerId}','${shopId}','saving')">🗑</button></div></div>`;
+    });
+    if(!entries.length) html+='<p class="note">No savings recorded yet. Start saving today!</p>';
+    html+=`</div>`;
+    c.innerHTML=html;
+}
+
+async function addSaving(cid,shopId){
+    const amount=parseFloat(document.getElementById('savAmt').value);
+    const where=document.getElementById('savWhere').value;
+    const date=document.getElementById('savDate').value;
+    const note=document.getElementById('savNote').value.trim();
+    if(!amount||amount<=0){alert('Enter valid amount.');return;}
+    await db.collection('shop_savings').add({amount,where,date,note,shopId,createdBy:CU.uid,createdAt:new Date().toISOString()});
+    document.getElementById('savMsg2').innerHTML='<div class="msg msg-ok">✅ Savings recorded!</div>';
+    setTimeout(()=>loadSavingsManager(cid,shopId),800);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MONTHLY BILLS — Rent, Electricity, recurring fixed costs
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadMonthlyBills(containerId,shopId){
+    const c=document.getElementById(containerId);
+    const today=new Date().toISOString().split('T')[0];
+    const currentMonth=new Date().toLocaleDateString('en-IN',{month:'long',year:'numeric'});
+    const snap=await db.collection('shop_bills').where('shopId','==',shopId).get();
+
+    let html=`<div class="card"><h2>🧾 Record Monthly Bill</h2>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Track your fixed monthly costs: rent, electricity, water, internet, etc.</p>
+        <div class="row"><label>Bill Type:</label><select id="billType">
+            <option value="Shop Rent">Shop Rent</option>
+            <option value="Electricity">Electricity Bill</option>
+            <option value="Water">Water Bill</option>
+            <option value="Internet/Phone">Internet / Phone</option>
+            <option value="Gas">Gas Bill</option>
+            <option value="Insurance">Insurance Premium</option>
+            <option value="License/Tax">License / Tax</option>
+            <option value="Other">Other</option>
+        </select></div>
+        <div class="row"><label>Amount (₹):</label><input type="number" id="billAmt" placeholder="0"></div>
+        <div class="row"><label>Month/Date:</label><input type="date" id="billDate" value="${today}"></div>
+        <div class="row"><label>Note:</label><input type="text" id="billNote" placeholder="e.g. June 2026 rent"></div>
+        <button class="btn btn-accent" onclick="addBill('${containerId}','${shopId}')">+ Record Bill</button>
+        <div id="billMsg"></div></div>`;
+
+    // Summary by type
+    let typeTotals={},monthTotal=0,allTotal=0;
+    const thisMonthStart=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().split('T')[0];
+    const entries=[];
+    snap.forEach(doc=>{const b=doc.data();entries.push({id:doc.id,...b});allTotal+=b.amount;
+        if(b.date>=thisMonthStart)monthTotal+=b.amount;
+        typeTotals[b.billType||'Other']=(typeTotals[b.billType||'Other']||0)+b.amount;});
+    entries.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+    html+=`<div class="card"><h2>Bills Summary — ${currentMonth}</h2>
+        <div class="stats-grid">
+            <div class="stat-card"><div class="val" style="color:var(--warning)">₹${monthTotal.toLocaleString('en-IN')}</div><div class="lbl">This Month</div></div>
+            <div class="stat-card"><div class="val">₹${allTotal.toLocaleString('en-IN')}</div><div class="lbl">All Time</div></div>
+        </div>`;
+    // By type
+    html+='<h3 style="font-size:11px;color:var(--primary);margin:10px 0 6px">Cost Breakdown:</h3>';
+    Object.entries(typeTotals).sort((a,b)=>b[1]-a[1]).forEach(([type,amt])=>{
+        html+=`<div class="cart-item"><div><b>${type}</b></div><div style="font-weight:700;color:var(--warning)">₹${amt.toLocaleString('en-IN')}</div></div>`;
+    });
+    html+=`</div>`;
+
+    // Recent bills
+    html+=`<div class="card"><h2>Bill History</h2>`;
+    entries.slice(0,20).forEach(b=>{
+        html+=`<div class="cart-item"><div><b>${b.billType||'Bill'}</b>${b.note?' — '+b.note:''}<br><span style="font-size:10px;color:var(--muted)">${new Date(b.date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</span></div><div style="display:flex;align-items:center;gap:6px"><span style="font-weight:700;color:var(--warning)">₹${b.amount.toLocaleString('en-IN')}</span><button class="btn btn-danger btn-sm" onclick="delFinEntry('${b.id}','${containerId}','${shopId}','bill')">🗑</button></div></div>`;
+    });
+    if(!entries.length) html+='<p class="note">No bills recorded yet.</p>';
+    html+=`</div>`;
+    c.innerHTML=html;
+}
+
+async function addBill(cid,shopId){
+    const billType=document.getElementById('billType').value;
+    const amount=parseFloat(document.getElementById('billAmt').value);
+    const date=document.getElementById('billDate').value;
+    const note=document.getElementById('billNote').value.trim();
+    if(!amount||amount<=0){alert('Enter valid amount.');return;}
+    await db.collection('shop_bills').add({billType,amount,date,note,shopId,createdBy:CU.uid,createdAt:new Date().toISOString()});
+    // Also log as expense
+    await db.collection('shop_accounts').add({type:'expense',amount,description:billType+(note?' - '+note:''),category:billType,period:'monthly',date,shopId,createdBy:CU.uid,createdAt:new Date().toISOString()});
+    document.getElementById('billMsg').innerHTML='<div class="msg msg-ok">✅ Bill recorded!</div>';
+    setTimeout(()=>loadMonthlyBills(cid,shopId),800);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DELETE FINANCE ENTRY (generic)
+// ═══════════════════════════════════════════════════════════════════════════════
+async function delFinEntry(id,cid,shopId,type){
+    if(!confirm('Delete this entry?')) return;
+    if(type==='sale') await db.collection('shop_accounts').doc(id).delete();
+    else if(type==='expense') await db.collection('shop_accounts').doc(id).delete();
+    else if(type==='saving') await db.collection('shop_savings').doc(id).delete();
+    else if(type==='bill') await db.collection('shop_bills').doc(id).delete();
+    // Reload the appropriate section
+    if(type==='sale') loadDailySales(cid,shopId);
+    else if(type==='expense') loadSmartExpenses(cid,shopId);
+    else if(type==='saving') loadSavingsManager(cid,shopId);
+    else if(type==='bill') loadMonthlyBills(cid,shopId);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════════
+updateCartCount();
+</script>
+</body>
+</html>
