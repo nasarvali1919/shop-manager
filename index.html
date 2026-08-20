@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1B5E20">
 <title>ShopManager — Smart Shop & Accounts</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -128,6 +132,10 @@ textarea{max-width:100%;min-height:60px;resize:vertical}
 
 .search-bar{width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:10px;font-size:13px;margin-bottom:12px;max-width:100%}
 .search-bar:focus{outline:none;border-color:var(--primary)}
+
+.install-banner{display:none;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border-radius:12px;padding:14px 16px;margin-bottom:12px;text-align:center;font-size:13px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.install-banner.visible{display:block}
+.install-banner b{font-size:14px}
 
 @media(max-width:480px){
     .product-grid{grid-template-columns:repeat(2,1fr);gap:8px}
@@ -1879,6 +1887,53 @@ async function delFinEntry(id,cid,shopId,type){
 // INIT
 // ═══════════════════════════════════════════════════════════════════════════════
 updateCartCount();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PWA — Service Worker & Install Prompt
+// ═══════════════════════════════════════════════════════════════════════════════
+if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(e=>console.log('SW registration failed:',e));
+}
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    showInstallBanner();
+});
+
+function showInstallBanner(){
+    // Add banner to main container if not already there
+    let banner=document.getElementById('installBanner');
+    if(!banner){
+        banner=document.createElement('div');
+        banner.id='installBanner';
+        banner.className='install-banner visible';
+        banner.innerHTML='📲 <b>Install ShopManager</b><br>Tap here to add to your home screen for quick access!';
+        banner.onclick=installApp;
+        const container=document.getElementById('mainContainer');
+        if(container) container.insertBefore(banner,container.firstChild);
+    } else {
+        banner.classList.add('visible');
+    }
+}
+
+async function installApp(){
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    if(result.outcome === 'accepted'){
+        const banner=document.getElementById('installBanner');
+        if(banner) banner.classList.remove('visible');
+    }
+    deferredPrompt = null;
+}
+
+window.addEventListener('appinstalled', () => {
+    const banner=document.getElementById('installBanner');
+    if(banner) banner.classList.remove('visible');
+    deferredPrompt = null;
+});
 </script>
 </body>
 </html>
